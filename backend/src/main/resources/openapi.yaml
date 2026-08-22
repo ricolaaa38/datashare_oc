@@ -1,0 +1,845 @@
+openapi: 3.1.0
+
+info:
+  title: DataShare API
+  version: 1.0.0
+  description: >
+    API for uploading, managing and downloading files (MVP).
+    Storage: AWS S3.
+
+servers:
+  - url: https://api.datashare.example.com
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: files
+    description: File management endpoints
+  - name: anonymous-files
+    description: Anonymous file upload endpoints
+  - name: downloads
+    description: File download endpoints
+  - name: fileTags
+    description: Tag management endpoints
+  - name: users
+    description: User registration endpoints
+  - name: auth
+    description: Authentication endpoints
+
+paths:
+
+  /files:
+    post:
+      tags:
+        - files
+      summary: Upload a file
+      description: >
+        Upload a file owned by the authenticated user.
+        The file may optionally be protected by a password.
+        Expiration is mandatory and must be between 1 and 7 days.
+        Maximum file size is 1 GB.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                originalName:
+                  type: string
+                mimeType:
+                  type: string
+                expiresInDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 7
+                  default: 7
+                password:
+                  type: string
+                  minLength: 6
+                  description: >
+                    Optional file password. The server must store only a hash.
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 30
+              required:
+                - file
+                - originalName
+                - expiresInDays
+      responses:
+        "201":
+          description: File created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: Payload too large
+
+    get:
+      tags:
+        - files
+      summary: List files
+      description: >
+        Returns files owned by the authenticated user.
+        Anonymous files are not associated with any user and therefore do not
+        appear in an authenticated user's file list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+        - name: tag
+          in: query
+          description: Filter files by tag name.
+          schema:
+            type: string
+            maxLength: 30
+        - name: q
+          in: query
+          description: Search files by original name.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paged list of files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedFiles"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /anonymous/files:
+    post:
+      tags:
+        - anonymous-files
+      summary: Upload a file anonymously
+      description: >
+        Upload a file without authentication.
+        owner_id is NULL for anonymous files.
+        The file may optionally be protected by a password.
+        Expiration is mandatory and must be between 1 and 7 days.
+        Maximum file size is 1 GB.
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                originalName:
+                  type: string
+                mimeType:
+                  type: string
+                expiresInDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 7
+                  default: 7
+                password:
+                  type: string
+                  minLength: 6
+                  description: >
+                    Optional file password. The server must store only a hash.
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 30
+              required:
+                - file
+                - originalName
+                - expiresInDays
+      responses:
+        "201":
+          description: Anonymous file created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          description: Payload too large
+
+  /files/{fileId}:
+    parameters:
+      - $ref: "#/components/parameters/fileId"
+
+    get:
+      tags:
+        - files
+      summary: Get file metadata
+      responses:
+        "200":
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags:
+        - files
+      summary: Update file metadata
+      description: >
+        Update metadata of a file owned by the authenticated user.
+        The password itself is not returned by the API.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileUpdateRequest"
+      responses:
+        "200":
+          description: Updated file metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - files
+      summary: Delete a file
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: File deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /files/{fileId}/download-tokens:
+    parameters:
+      - $ref: "#/components/parameters/fileId"
+
+    post:
+      tags:
+        - files
+      summary: Create or replace the download token for a file
+      description: >
+        Generates a cryptographically unpredictable download token for the file.
+        Only the hash of the token is stored in the database.
+        The MCD specifies a one-to-one relationship between FILE and
+        DOWNLOAD_TOKEN, therefore a file can have at most one token.
+        File expiration is controlled by FILE.expires_at.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Download token created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /files/{fileId}/presigned-url:
+    parameters:
+      - $ref: "#/components/parameters/fileId"
+
+    get:
+      tags:
+        - files
+      summary: Get a presigned S3 URL
+      description: >
+        Returns a presigned S3 URL for direct upload or download.
+        The file storage location is represented by FILE.storage_key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: operation
+          in: query
+          schema:
+            type: string
+            enum:
+              - put
+              - get
+            default: put
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresignedUrlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /downloads/{token}:
+    get:
+      tags:
+        - downloads
+      summary: Download a file using a token
+      description: >
+        Downloads the file associated with the supplied token.
+        The token is resolved using its hash in DOWNLOAD_TOKEN.
+        The download is rejected when FILE.expires_at has been reached.
+        If the file has a password, the supplied password must match the
+        stored password hash.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: >
+            The raw, cryptographically unpredictable download token.
+            It is never stored directly in the database.
+          schema:
+            type: string
+        - name: X-File-Password
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File content
+          headers:
+            Content-Disposition:
+              description: Suggested filename and disposition
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Invalid token or invalid file password
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          description: File expired
+
+  /tags:
+    get:
+      tags:
+        - fileTags
+      summary: List tags owned by the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+      responses:
+        "200":
+          description: List of the user's tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileTag"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags:
+        - fileTags
+      summary: Create a tag
+      description: >
+        Creates a tag for the authenticated user.
+        The combination of user_id and name must be unique.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagCreateRequest"
+      responses:
+        "201":
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileTag"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Tag with the same name already exists for this user
+
+  /users:
+    post:
+      tags:
+        - users
+      summary: Register a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email already registered
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+
+    fileId:
+      name: fileId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+    tagId:
+      name: tagId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+      required:
+        - code
+        - message
+
+    File:
+      type: object
+      description: >
+        File entity corresponding to FILE in the conceptual data model.
+      properties:
+        fileId:
+          type: integer
+          minimum: 1
+          description: Primary key FILE.file_id.
+
+        ownerId:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: >
+            Foreign key to USER.user_id.
+            NULL means the file was uploaded anonymously.
+
+        originalName:
+          type: string
+          description: Original filename.
+
+        storageKey:
+          type: string
+          description: S3 object key.
+
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: File size in bytes.
+
+        mimeType:
+          type: string
+          description: MIME type of the file.
+
+        createdAt:
+          type: string
+          format: date-time
+          description: File creation timestamp.
+
+        expiresAt:
+          type: string
+          format: date-time
+          description: >
+            Mandatory expiration timestamp.
+            The file is considered expired after this timestamp.
+
+        hasPassword:
+          type: boolean
+          readOnly: true
+          description: >
+            True when password_hash is present in the database.
+            The actual password hash is never exposed.
+
+      required:
+        - fileId
+        - originalName
+        - storageKey
+        - sizeBytes
+        - mimeType
+        - createdAt
+        - expiresAt
+        - hasPassword
+
+    FileUpdateRequest:
+      type: object
+      properties:
+        originalName:
+          type: string
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 7
+        password:
+          type: string
+          minLength: 6
+          nullable: true
+          description: >
+            New optional file password. The server stores only its hash.
+            Sending null removes the password protection.
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+
+    FileTagsUpdateRequest:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+      required:
+        - tags
+
+    DownloadToken:
+      type: object
+      description: >
+        DOWNLOAD_TOKEN entity. token_hash is stored instead of the raw token.
+        fileId is unique because one file can have only one download token.
+      properties:
+        tokenId:
+          type: integer
+          minimum: 1
+        fileId:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - tokenId
+        - fileId
+        - createdAt
+
+    DownloadTokenResponse:
+      type: object
+      description: >
+        The raw token is returned only once to the API consumer.
+        The server stores only its hash.
+      properties:
+        token:
+          type: string
+          description: >
+            Cryptographically unpredictable token. Its hash is stored in
+            DOWNLOAD_TOKEN.token_hash.
+        downloadUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - token
+        - downloadUrl
+        - createdAt
+
+    PagedFiles:
+      type: object
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/File"
+      required:
+        - total
+        - page
+        - size
+        - items
+
+    FileTag:
+      type: object
+      description: >
+        TAG entity. A tag belongs to exactly one user.
+        The pair (userId, name) must be unique.
+      properties:
+        tagId:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          maxLength: 30
+        userId:
+          type: integer
+          minimum: 1
+      required:
+        - tagId
+        - name
+        - userId
+
+    TagCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 30
+      required:
+        - name
+
+    FileTagAssociation:
+      type: object
+      description: >
+        FILE_TAG association entity with a composite primary key
+        consisting of fileId and tagId.
+      properties:
+        fileId:
+          type: integer
+          minimum: 1
+        tagId:
+          type: integer
+          minimum: 1
+      required:
+        - fileId
+        - tagId
+
+    User:
+      type: object
+      description: >
+        USER entity. password_hash is intentionally excluded from API responses.
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+
+        email:
+          type: string
+          format: email
+          description: Unique email address.
+
+        createdAt:
+          type: string
+          format: date-time
+
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+
+      required:
+        - userId
+        - email
+        - createdAt
+
+    UserCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          description: >
+            Plain password received during registration.
+            The server must store only a password hash.
+      required:
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - accessToken
+        - user
+
+    PresignedUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        method:
+          type: string
+          enum:
+            - PUT
+            - GET
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - url
+        - method
+        - expiresAt

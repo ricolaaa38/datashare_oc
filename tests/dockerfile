@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/playwright:v1.49.0-jammy
+
+# k6 pour les tests de performance
+RUN curl -fsSL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
+    | tar xz --strip-components 1 -C /usr/local/bin k6-v0.54.0-linux-amd64/k6
+
+WORKDIR /workspace
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY e2e ./e2e
+COPY perf ./perf
+
+CMD ["bash"]
