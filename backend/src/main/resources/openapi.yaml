@@ -39,6 +39,9 @@ paths:
         The file may optionally be protected by a password.
         Expiration is mandatory and must be between 1 and 7 days.
         Maximum file size is 1 GB.
+        Forbidden file types are rejected according to the configured security
+        policy (for example .exe, .bat).
+        At expiration, the file content and metadata are automatically deleted.
       security:
         - bearerAuth: []
       requestBody:
@@ -133,6 +136,9 @@ paths:
         The file may optionally be protected by a password.
         Expiration is mandatory and must be between 1 and 7 days.
         Maximum file size is 1 GB.
+        Forbidden file types are rejected according to the configured security
+        policy (for example .exe, .bat).
+        At expiration, the file content and metadata are automatically deleted.
       security: []
       requestBody:
         required: true
@@ -187,6 +193,8 @@ paths:
       tags:
         - files
       summary: Get file metadata
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: File metadata
@@ -257,6 +265,8 @@ paths:
         Only the hash of the token is stored in the database.
         The MCD specifies a one-to-one relationship between FILE and
         DOWNLOAD_TOKEN, therefore a file can have at most one token.
+        Creating a new token invalidates and replaces any previous token for
+        that file.
         File expiration is controlled by FILE.expires_at.
       security:
         - bearerAuth: []
@@ -767,7 +777,7 @@ components:
           type: integer
           minimum: 1
 
-        email:
+        login:
           type: string
           format: email
           description: Unique email address.
@@ -783,13 +793,13 @@ components:
 
       required:
         - userId
-        - email
+        - login
         - createdAt
 
     UserCreateRequest:
       type: object
       properties:
-        email:
+        login:
           type: string
           format: email
         password:
@@ -799,19 +809,19 @@ components:
             Plain password received during registration.
             The server must store only a password hash.
       required:
-        - email
+        - login
         - password
 
     LoginRequest:
       type: object
       properties:
-        email:
+        login:
           type: string
           format: email
         password:
           type: string
       required:
-        - email
+        - login
         - password
 
     LoginResponse:
