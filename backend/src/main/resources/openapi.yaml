@@ -83,7 +83,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/File"
+                $ref: "#/components/schemas/FileResource"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -179,7 +179,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/File"
+                $ref: "#/components/schemas/FileResource"
         "400":
           $ref: "#/components/responses/BadRequest"
         "413":
@@ -201,7 +201,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/File"
+                $ref: "#/components/schemas/FileResource"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -226,7 +226,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/File"
+                $ref: "#/components/schemas/FileResource"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -560,7 +560,7 @@ components:
         - code
         - message
 
-    File:
+    FileResource:
       type: object
       description: >
         File entity corresponding to FILE in the conceptual data model.
@@ -614,6 +614,24 @@ components:
           description: >
             True when password_hash is present in the database.
             The actual password hash is never exposed.
+
+        downloadToken:
+          type: string
+          readOnly: true
+          nullable: true
+          description: >
+            Raw, unpredictable download token. Only ever returned once, right
+            after upload (POST /files), because only its hash is persisted
+            afterward. Always null on GET/PATCH responses.
+
+        downloadUrl:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+          description: >
+            Ready-to-share download link built from downloadToken. Same
+            availability constraint as downloadToken.
 
       required:
         - fileId
@@ -715,7 +733,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/File"
+            $ref: "#/components/schemas/FileResource"
       required:
         - total
         - page
