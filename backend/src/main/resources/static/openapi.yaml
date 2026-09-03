@@ -56,6 +56,9 @@ paths:
                   format: binary
                 originalName:
                   type: string
+                  description: >
+                    Optional. Defaults to the filename carried by the uploaded
+                    part.
                 mimeType:
                   type: string
                 expiresInDays:
@@ -63,20 +66,21 @@ paths:
                   minimum: 1
                   maximum: 7
                   default: 7
+                  description: >
+                    Optional. Defaults to 7 days when omitted.
                 password:
                   type: string
                   minLength: 6
                   description: >
                     Optional file password. The server must store only a hash.
                 tags:
-                  type: array
-                  items:
-                    type: string
-                    maxLength: 30
+                  type: string
+                  description: >
+                    Optional comma-separated list of tag names, each between 1
+                    and 30 characters, for example "photos,vacances". Blank
+                    entries and duplicates are ignored.
               required:
                 - file
-                - originalName
-                - expiresInDays
       responses:
         "201":
           description: File created
@@ -152,6 +156,9 @@ paths:
                   format: binary
                 originalName:
                   type: string
+                  description: >
+                    Optional. Defaults to the filename carried by the uploaded
+                    part.
                 mimeType:
                   type: string
                 expiresInDays:
@@ -159,20 +166,15 @@ paths:
                   minimum: 1
                   maximum: 7
                   default: 7
+                  description: >
+                    Optional. Defaults to 7 days when omitted.
                 password:
                   type: string
                   minLength: 6
                   description: >
                     Optional file password. The server must store only a hash.
-                tags:
-                  type: array
-                  items:
-                    type: string
-                    maxLength: 30
               required:
                 - file
-                - originalName
-                - expiresInDays
       responses:
         "201":
           description: Anonymous file created
@@ -284,6 +286,42 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /files/{fileId}/tags:
+    parameters:
+      - $ref: "#/components/parameters/fileId"
+
+    put:
+      tags:
+        - files
+      summary: Replace the tags of a file
+      description: >
+        Replaces the whole tag set of a file owned by the authenticated user.
+        Tags that do not exist yet are created on the fly for that user.
+        Sending an empty array removes every tag from the file.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileTagsUpdateRequest"
+      responses:
+        "200":
+          description: Updated file metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileResource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /files/{fileId}/presigned-url:
     parameters:
       - $ref: "#/components/parameters/fileId"
@@ -320,7 +358,39 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /downloads/{token}/metadata:
+    parameters:
+      - $ref: "#/components/parameters/downloadToken"
+
+    get:
+      tags:
+        - downloads
+      summary: Preview the metadata of a shared file
+      description: >
+        Returns the metadata of the file behind a download link, so that a
+        recipient can see what is being shared (name, type, size, expiration)
+        before downloading it.
+        No password is required for this call: the "hasPassword" flag tells the
+        client whether it must prompt for a password before calling
+        GET /downloads/{token}.
+        Neither the storage key nor the password hash is ever exposed.
+      security: []
+      responses:
+        "200":
+          description: Metadata of the shared file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadMetadata"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
+
   /downloads/{token}:
+    parameters:
+      - $ref: "#/components/parameters/downloadToken"
+
     get:
       tags:
         - downloads
@@ -328,22 +398,19 @@ paths:
       description: >
         Downloads the file associated with the supplied token.
         The token is resolved using its hash in DOWNLOAD_TOKEN.
-        The download is rejected when FILE.expires_at has been reached.
-        If the file has a password, the supplied password must match the
-        stored password hash.
+        An unknown token returns 404, an expired one returns 410.
+        If the file is password protected, the password must be supplied in the
+        X-File-Password header; a missing or wrong password returns 401.
+        Repeated wrong passwords for the same token are throttled and answered
+        with 429.
       security: []
       parameters:
-        - name: token
-          in: path
-          required: true
-          description: >
-            The raw, cryptographically unpredictable download token.
-            It is never stored directly in the database.
-          schema:
-            type: string
         - name: X-File-Password
           in: header
           required: false
+          description: >
+            Required only when the file is password protected, as reported by
+            GET /downloads/{token}/metadata.
           schema:
             type: string
       responses:
@@ -360,11 +427,21 @@ paths:
                 type: string
                 format: binary
         "401":
-          description: Invalid token or invalid file password
+          description: Missing or invalid file password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           $ref: "#/components/responses/NotFound"
         "410":
-          description: File expired
+          $ref: "#/components/responses/Gone"
+        "429":
+          description: Too many failed password attempts for this link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /tags:
     get:
@@ -440,6 +517,10 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /auth/login:
     post:
@@ -479,6 +560,7 @@ components:
       required: true
       schema:
         type: integer
+        format: int64
         minimum: 1
 
     userId:
@@ -487,6 +569,7 @@ components:
       required: true
       schema:
         type: integer
+        format: int64
         minimum: 1
 
     tagId:
@@ -495,7 +578,18 @@ components:
       required: true
       schema:
         type: integer
+        format: int64
         minimum: 1
+
+    downloadToken:
+      name: token
+      in: path
+      required: true
+      description: >
+        The raw, cryptographically unpredictable download token.
+        It is never stored directly in the database, only its hash is.
+      schema:
+        type: string
 
     page:
       name: page
@@ -544,6 +638,13 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
 
+    Gone:
+      description: The resource has expired and is no longer available
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
   schemas:
 
     Error:
@@ -567,11 +668,13 @@ components:
       properties:
         fileId:
           type: integer
+          format: int64
           minimum: 1
           description: Primary key FILE.file_id.
 
         ownerId:
           type: integer
+          format: int64
           minimum: 1
           nullable: true
           description: >
@@ -581,10 +684,6 @@ components:
         originalName:
           type: string
           description: Original filename.
-
-        storageKey:
-          type: string
-          description: S3 object key.
 
         sizeBytes:
           type: integer
@@ -615,6 +714,14 @@ components:
             True when password_hash is present in the database.
             The actual password hash is never exposed.
 
+        tags:
+          type: array
+          readOnly: true
+          description: Names of the tags associated with the file.
+          items:
+            type: string
+            maxLength: 30
+
         downloadToken:
           type: string
           readOnly: true
@@ -636,7 +743,6 @@ components:
       required:
         - fileId
         - originalName
-        - storageKey
         - sizeBytes
         - mimeType
         - createdAt
@@ -684,9 +790,11 @@ components:
       properties:
         tokenId:
           type: integer
+          format: int64
           minimum: 1
         fileId:
           type: integer
+          format: int64
           minimum: 1
         createdAt:
           type: string
@@ -695,6 +803,40 @@ components:
         - tokenId
         - fileId
         - createdAt
+
+    DownloadMetadata:
+      type: object
+      description: >
+        Public view of a shared file, returned before the download so the
+        recipient knows what the link points to. Contains no storage key and no
+        password hash.
+      properties:
+        originalName:
+          type: string
+          description: Original filename.
+        mimeType:
+          type: string
+          description: MIME type of the file.
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: File size in bytes.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Timestamp after which the link stops working.
+        hasPassword:
+          type: boolean
+          description: >
+            True when a password must be supplied in the X-File-Password header
+            to download the file.
+      required:
+        - originalName
+        - mimeType
+        - sizeBytes
+        - expiresAt
+        - hasPassword
 
     DownloadTokenResponse:
       type: object
@@ -748,12 +890,14 @@ components:
       properties:
         tagId:
           type: integer
+          format: int64
           minimum: 1
         name:
           type: string
           maxLength: 30
         userId:
           type: integer
+          format: int64
           minimum: 1
       required:
         - tagId
@@ -778,9 +922,11 @@ components:
       properties:
         fileId:
           type: integer
+          format: int64
           minimum: 1
         tagId:
           type: integer
+          format: int64
           minimum: 1
       required:
         - fileId
@@ -822,9 +968,9 @@ components:
           format: email
         password:
           type: string
-          minLength: 6
+          minLength: 8
           description: >
-            Plain password received during registration.
+            Plain password received during registration (8 characters minimum).
             The server must store only a password hash.
       required:
         - login
