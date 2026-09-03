@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/users", "/auth/login", "/downloads/**").permitAll()
+                        .requestMatchers("/doc", "/doc/**", "/swagger-ui/**", "/swagger-ui/index.html", "/openapi.yaml", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
