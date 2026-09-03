@@ -1,15 +1,13 @@
 package com.openclassroom.datashare.service;
 
-import com.openclassroom.datashare.entity.DownloadToken;
 import com.openclassroom.datashare.entity.File;
+import com.openclassroom.datashare.entity.FileTag;
 import com.openclassroom.datashare.exception.BadRequestException;
 import com.openclassroom.datashare.exception.ForbiddenException;
 import com.openclassroom.datashare.exception.PayloadTooLargeException;
 import com.openclassroom.datashare.exception.ResourceNotFoundException;
-import com.openclassroom.datashare.repository.DownloadTokenRepository;
 import com.openclassroom.datashare.repository.FileRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,77 +15,98 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
-import java.util.Base64;
-import java.util.HexFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Business rules of US01: an authenticated user uploads a file, gets a unique
+ * download link, and finds the file again in a personal history.
+ */
 @Service
-@Transactional
-@RequiredArgsConstructor
 public class FileService {
 
-    private static final long MAX_SIZE_BYTES = 1024L * 1024L * 1024L; // 1 GB
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    public static final long MAX_SIZE_BYTES = 1024L * 1024L * 1024L; // 1 GB
+    public static final int MAX_EXPIRATION_DAYS = 7;
+    public static final int DEFAULT_EXPIRATION_DAYS = 7;
+    public static final int MIN_PASSWORD_LENGTH = 6;
+    private static final String DEFAULT_MIME_TYPE = "application/octet-stream";
 
     private final FileRepository fileRepository;
-    private final DownloadTokenRepository downloadTokenRepository;
+    private final DownloadTokenService downloadTokenService;
+    private final FileTagService fileTagService;
     private final FileStorageService storageService;
     private final PasswordEncoder passwordEncoder;
+    private final List<String> forbiddenExtensions;
 
-    @Value("${app.upload.forbidden-extensions:.exe,.bat,.cmd,.sh,.msi,.dll,.com,.scr,.jar,.vbs,.ps1}")
-    private String forbiddenExtensionsProperty;
-
-    @Value("${app.public-url:http://localhost:8080}")
-    private String publicUrl;
-
-    public UploadResult uploadFile(MultipartFile file, String originalName,
-            Integer expiresInDays,
-            String mimeType, String password, List<String> tags, Long ownerId) {
-
-        validateUpload(file, expiresInDays, password);
-
-        String key = "files/" + UUID.randomUUID() + "-" + sanitize(originalName);
-        String resolvedMimeType = (mimeType != null && !mimeType.isBlank())
-                ? mimeType
-                : (file.getContentType() != null ? file.getContentType() : "application/octet-stream");
-
-        storageService.store(file, key, resolvedMimeType);
-
-        File entity = new File();
-        entity.setOwnerId(ownerId);
-        entity.setOriginalName(originalName);
-        entity.setMimeType(resolvedMimeType);
-        entity.setSizeBytes(file.getSize());
-        entity.setStorageKey(key);
-        entity.setExpiresAt(OffsetDateTime.now().plusDays(expiresInDays));
-        if (password != null && !password.isBlank()) {
-            entity.setPasswordHash(passwordEncoder.encode(password));
-        }
-
-        entity = fileRepository.save(entity);
-        // a download link is generated immediately so the caller can share/store it
-        // without a second call
-        DownloadTokenResult tokenResult = generateDownloadToken(entity);
-        return new UploadResult(entity, tokenResult);
+    public FileService(FileRepository fileRepository,
+            DownloadTokenService downloadTokenService,
+            FileTagService fileTagService,
+            FileStorageService storageService,
+            PasswordEncoder passwordEncoder,
+            @Value("${app.upload.forbidden-extensions:.exe,.bat,.cmd,.sh,.msi,.dll,.com,.scr,.jar,.vbs,.ps1}") String forbiddenExtensions) {
+        this.fileRepository = fileRepository;
+        this.downloadTokenService = downloadTokenService;
+        this.fileTagService = fileTagService;
+        this.storageService = storageService;
+        this.passwordEncoder = passwordEncoder;
+        this.forbiddenExtensions = normalizeExtensions(forbiddenExtensions);
     }
 
-    public Page<File> listFiles(Long ownerId, int page, int size, String tag,
-            String q) {
-        Specification<File> spec = (root, query, cb) -> cb.equal(root.get("ownerId"),
-                ownerId);
+    @Transactional
+    public UploadResult upload(UploadCommand command) {
+        MultipartFile file = command.file();
+        String originalName = resolveOriginalName(command.originalName(), file);
+        int expiresInDays = command.expiresInDays() == null ? DEFAULT_EXPIRATION_DAYS : command.expiresInDays();
+
+        validateUpload(file, originalName, expiresInDays, command.password());
+
+        String storageKey = "files/" + UUID.randomUUID() + "-" + sanitize(originalName);
+        String mimeType = resolveMimeType(command.mimeType(), file);
+        Set<FileTag> tags = fileTagService.resolveOrCreate(command.ownerId(), command.tags());
+
+        storageService.store(file, storageKey, mimeType);
+        try {
+            File entity = new File();
+            entity.setOwnerId(command.ownerId());
+            entity.setOriginalName(originalName);
+            entity.setMimeType(mimeType);
+            entity.setSizeBytes(file.getSize());
+            entity.setStorageKey(storageKey);
+            entity.setExpiresAt(OffsetDateTime.now().plusDays(expiresInDays));
+            entity.setTags(tags);
+            if (hasPassword(command.password())) {
+                entity.setPasswordHash(passwordEncoder.encode(command.password()));
+            }
+
+            entity = fileRepository.save(entity);
+            // the download link is issued right away so the caller does not need a
+            // second round trip to share the file
+            return new UploadResult(entity, downloadTokenService.issueFor(entity));
+        } catch (RuntimeException e) {
+            // never leave an orphan object behind in the bucket
+            storageService.delete(storageKey);
+            throw e;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<File> listFiles(Long ownerId, int page, int size, String tag, String q) {
+        Specification<File> spec = ownedBy(ownerId).and(notExpired());
 
         if (tag != null && !tag.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("tags").get("name"), tag));
+            spec = spec.and((root, query, cb) -> {
+                // a file may match several rows through the FILE_TAG join
+                query.distinct(true);
+                return cb.equal(cb.lower(root.join("tags", JoinType.INNER).get("name")), tag.toLowerCase(Locale.ROOT));
+            });
         }
         if (q != null && !q.isBlank()) {
             spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("originalName")),
@@ -97,125 +116,180 @@ public class FileService {
         return fileRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
+    /**
+     * Returns the file only when it belongs to the caller. A file owned by
+     * somebody else is reported as "not found" rather than "forbidden" so the API
+     * does not leak the existence of other users' files.
+     */
+    @Transactional(readOnly = true)
     public File getOwnedFile(Long fileId, Long ownerId) {
-        // returned as "not found" (rather than forbidden) to avoid leaking the
-        // existence of files owned by others
         return fileRepository.findByFileIdAndOwnerId(fileId, ownerId)
+                .filter(file -> !file.isExpired(OffsetDateTime.now()))
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
     }
 
+    @Transactional(readOnly = true)
     public File requireOwnedFile(Long fileId, Long ownerId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
-        if (!ownerId.equals(file.getOwnerId())) {
+        if (!java.util.Objects.equals(ownerId, file.getOwnerId())) {
             throw new ForbiddenException("You do not own this file");
+        }
+        if (file.isExpired(OffsetDateTime.now())) {
+            throw new ResourceNotFoundException("File not found");
         }
         return file;
     }
 
-    public DownloadTokenResult createDownloadToken(Long fileId, Long ownerId) {
-        File file = requireOwnedFile(fileId, ownerId);
-        return generateDownloadToken(file);
+    @Transactional
+    public DownloadTokenService.IssuedToken createDownloadToken(Long fileId, Long ownerId) {
+        return downloadTokenService.issueFor(requireOwnedFile(fileId, ownerId));
     }
 
-    private DownloadTokenResult generateDownloadToken(File file) {
-        // flush so the DELETE reaches the DB before the INSERT below (Hibernate would
-        // otherwise order the insert first)
-        downloadTokenRepository.findByFile_FileId(file.getFileId()).ifPresent(existing -> {
-            downloadTokenRepository.delete(existing);
-            downloadTokenRepository.flush();
-        });
-
-        byte[] tokenBytes = new byte[32];
-        SECURE_RANDOM.nextBytes(tokenBytes);
-        String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
-
-        DownloadToken downloadToken = new DownloadToken();
-        downloadToken.setFile(file);
-        downloadToken.setTokenHash(hash(rawToken));
-        downloadToken = downloadTokenRepository.save(downloadToken);
-
-        URI downloadUrl = URI.create(publicUrl + "/downloads/" + rawToken);
-        return new DownloadTokenResult(rawToken, downloadUrl, downloadToken.getCreatedAt());
-    }
-
+    @Transactional
     public File updateFile(Long fileId, Long ownerId, String originalName,
             Integer expiresInDays, String password, List<String> tags) {
         File file = requireOwnedFile(fileId, ownerId);
 
         if (originalName != null && !originalName.isBlank()) {
-            file.setOriginalName(originalName);
+            file.setOriginalName(originalName.trim());
         }
         if (expiresInDays != null) {
-            if (expiresInDays < 1 || expiresInDays > 7) {
-                throw new BadRequestException("expiresInDays must be between 1 and 7");
-            }
+            validateExpiration(expiresInDays);
             file.setExpiresAt(OffsetDateTime.now().plusDays(expiresInDays));
         }
         if (password != null) {
-            if (!password.isBlank() && password.length() < 6) {
-                throw new BadRequestException("password must be at least 6 characters long");
+            // an explicit blank password removes the protection
+            if (password.isBlank()) {
+                file.setPasswordHash(null);
+            } else {
+                validatePassword(password);
+                file.setPasswordHash(passwordEncoder.encode(password));
             }
-            file.setPasswordHash(password.isBlank() ? null : passwordEncoder.encode(password));
+        }
+        if (tags != null) {
+            file.setTags(fileTagService.resolveOrCreate(ownerId, tags));
         }
         return fileRepository.save(file);
     }
 
-    public void deleteFile(Long fileId, Long ownerId) {
+    @Transactional
+    public File replaceTags(Long fileId, Long ownerId, List<String> tags) {
         File file = requireOwnedFile(fileId, ownerId);
-        downloadTokenRepository.findByFile_FileId(fileId).ifPresent(downloadTokenRepository::delete);
-        storageService.delete(file.getStorageKey());
-        fileRepository.delete(file);
+        file.setTags(fileTagService.resolveOrCreate(ownerId, tags == null ? List.of() : tags));
+        return fileRepository.save(file);
     }
 
-    private void validateUpload(MultipartFile file, Integer expiresInDays, String password) {
+    @Transactional
+    public void deleteFile(Long fileId, Long ownerId) {
+        purge(requireOwnedFile(fileId, ownerId));
+    }
+
+    /**
+     * Removes the metadata, the FILE_TAG associations, the download token and the
+     * stored object. The bucket deletion runs inside the transaction so that a
+     * storage failure rolls the whole thing back and lets the caller retry.
+     */
+    @Transactional
+    public void purge(File file) {
+        downloadTokenService.deleteFor(file.getFileId());
+        file.getTags().clear();
+        fileRepository.delete(file);
+        fileRepository.flush();
+        storageService.delete(file.getStorageKey());
+    }
+
+    @Transactional(readOnly = true)
+    public List<File> findExpired(OffsetDateTime now, int batchSize) {
+        return fileRepository.findAllByExpiresAtBefore(now, PageRequest.of(0, batchSize));
+    }
+
+    private void validateUpload(MultipartFile file, String originalName, int expiresInDays, String password) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("The uploaded file must not be empty");
         }
         if (file.getSize() > MAX_SIZE_BYTES) {
             throw new PayloadTooLargeException("Maximum file size is 1 GB");
         }
-        if (expiresInDays == null || expiresInDays < 1 || expiresInDays > 7) {
-            throw new BadRequestException("expiresInDays must be between 1 and 7");
+        validateExpiration(expiresInDays);
+        if (hasPassword(password)) {
+            validatePassword(password);
         }
-        if (password != null && !password.isBlank() && password.length() < 6) {
-            throw new BadRequestException("password must be at least 6 characters long");
-        }
-        String originalName = file.getOriginalFilename();
         if (isForbiddenExtension(originalName)) {
             throw new BadRequestException("This file type is not allowed");
         }
     }
 
-    private boolean isForbiddenExtension(String filename) {
-        if (filename == null) {
-            return false;
+    private void validateExpiration(int expiresInDays) {
+        if (expiresInDays < 1 || expiresInDays > MAX_EXPIRATION_DAYS) {
+            throw new BadRequestException("expiresInDays must be between 1 and " + MAX_EXPIRATION_DAYS);
         }
-        String lower = filename.toLowerCase(Locale.ROOT);
-        return forbiddenExtensions().stream().anyMatch(lower::endsWith);
     }
 
-    private List<String> forbiddenExtensions() {
-        return List.of(forbiddenExtensionsProperty.split(","));
+    private void validatePassword(String password) {
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            throw new BadRequestException(
+                    "password must be at least " + MIN_PASSWORD_LENGTH + " characters long");
+        }
+    }
+
+    private boolean hasPassword(String password) {
+        return password != null && !password.isBlank();
+    }
+
+    private boolean isForbiddenExtension(String filename) {
+        String lower = filename.toLowerCase(Locale.ROOT);
+        return forbiddenExtensions.stream().anyMatch(lower::endsWith);
+    }
+
+    /**
+     * Falls back to the name carried by the multipart part, and keeps only the
+     * last path segment because some clients send a full path.
+     */
+    private String resolveOriginalName(String requestedName, MultipartFile file) {
+        String candidate = requestedName != null && !requestedName.isBlank()
+                ? requestedName
+                : (file == null ? null : file.getOriginalFilename());
+        if (candidate == null || candidate.isBlank()) {
+            return "file";
+        }
+        String baseName = Paths.get(candidate.replace('\\', '/')).getFileName().toString().trim();
+        return baseName.isEmpty() ? "file" : baseName;
+    }
+
+    private String resolveMimeType(String requestedMimeType, MultipartFile file) {
+        if (requestedMimeType != null && !requestedMimeType.isBlank()) {
+            return requestedMimeType;
+        }
+        String contentType = file == null ? null : file.getContentType();
+        return contentType != null && !contentType.isBlank() ? contentType : DEFAULT_MIME_TYPE;
     }
 
     private String sanitize(String name) {
-        return name == null ? "file" : name.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return name.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
-    private String hash(String rawToken) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not available", e);
-        }
+    private static Specification<File> ownedBy(Long ownerId) {
+        return (root, query, cb) -> cb.equal(root.get("ownerId"), ownerId);
     }
 
-    public record DownloadTokenResult(String token, URI downloadUrl, OffsetDateTime createdAt) {
+    private static Specification<File> notExpired() {
+        // an expired file is logically gone even if the cleanup job has not run yet
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("expiresAt"), OffsetDateTime.now());
     }
 
-    public record UploadResult(File file, DownloadTokenResult downloadToken) {
+    private static List<String> normalizeExtensions(String rawExtensions) {
+        return Arrays.stream(rawExtensions.split(","))
+                .map(extension -> extension.trim().toLowerCase(Locale.ROOT))
+                .filter(extension -> !extension.isEmpty())
+                .map(extension -> extension.startsWith(".") ? extension : "." + extension)
+                .toList();
+    }
+
+    public record UploadCommand(MultipartFile file, String originalName, String mimeType,
+            Integer expiresInDays, String password, List<String> tags, Long ownerId) {
+    }
+
+    public record UploadResult(File file, DownloadTokenService.IssuedToken downloadToken) {
     }
 }

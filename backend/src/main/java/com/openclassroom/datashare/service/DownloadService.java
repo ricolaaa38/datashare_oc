@@ -1,55 +1,86 @@
 package com.openclassroom.datashare.service;
 
-import com.openclassroom.datashare.entity.DownloadToken;
 import com.openclassroom.datashare.entity.File;
 import com.openclassroom.datashare.exception.FileExpiredException;
 import com.openclassroom.datashare.exception.InvalidTokenOrPasswordException;
-import com.openclassroom.datashare.repository.DownloadTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.io.Closeable;
+import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.util.HexFormat;
 
+/**
+ * Serves US02: anyone holding a valid link can see what is shared and download
+ * it, providing the password when the file is protected.
+ */
 @Service
 @RequiredArgsConstructor
 public class DownloadService {
 
-    private final DownloadTokenRepository downloadTokenRepository;
+    private final DownloadTokenService downloadTokenService;
     private final FileStorageService storageService;
     private final PasswordEncoder passwordEncoder;
 
-    public DownloadResult downloadByToken(String rawToken, String password) {
-        DownloadToken downloadToken = downloadTokenRepository.findByTokenHash(hash(rawToken))
-                .orElseThrow(() -> new InvalidTokenOrPasswordException("Invalid or unknown download token"));
-
-        File file = downloadToken.getFile();
-
-        if (file.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            throw new FileExpiredException("This file has expired");
-        }
-
-        if (file.getPasswordHash() != null
-                && (password == null || !passwordEncoder.matches(password, file.getPasswordHash()))) {
-            throw new InvalidTokenOrPasswordException("A valid password is required to download this file");
-        }
-
-        InputStreamResource resource = new InputStreamResource(storageService.load(file.getStorageKey()));
-        return new DownloadResult(resource, file);
+    /**
+     * Metadata shown to the recipient before downloading. Deliberately requires
+     * no password: it only reveals what the sender chose to share, and the
+     * {@code hasPassword} flag is what lets the client decide whether to prompt
+     * for one.
+     */
+    @Transactional(readOnly = true)
+    public File describeByToken(String rawToken) {
+        File file = downloadTokenService.resolve(rawToken).getFile();
+        requireNotExpired(file);
+        return file;
     }
 
-    private String hash(String rawToken) {
+    @Transactional(readOnly = true)
+    public DownloadResult downloadByToken(String rawToken, String password) {
+
+        File file = downloadTokenService.resolve(rawToken).getFile();
+        requireNotExpired(file);
+        requireValidPassword(file, password);
+
+        // the stream stays open until the response body has been written, so it is
+        // only closed here when building the result fails
+        var content = storageService.load(file.getStorageKey());
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not available", e);
+            return new DownloadResult(new InputStreamResource(content), file);
+        } catch (RuntimeException e) {
+            closeQuietly(content);
+            throw e;
+        }
+    }
+
+    private void requireNotExpired(File file) {
+        if (file.isExpired(OffsetDateTime.now())) {
+            // the scheduled cleanup deletes the content shortly after expiry; refuse
+            // the link immediately so an expired one is never served
+            throw new FileExpiredException("This link has expired and the file is no longer available");
+        }
+    }
+
+    private void requireValidPassword(File file, String password) {
+        if (file.getPasswordHash() == null) {
+            return;
+        }
+        if (password == null || password.isBlank()) {
+            throw new InvalidTokenOrPasswordException("This file is password protected, a password is required");
+        }
+        if (!passwordEncoder.matches(password, file.getPasswordHash())) {
+            throw new InvalidTokenOrPasswordException("The supplied password is incorrect");
+        }
+    }
+
+    private void closeQuietly(Closeable closeable) {
+        try {
+            closeable.close();
+        } catch (IOException ignored) {
+            // nothing useful to do: the original failure is the one worth reporting
         }
     }
 

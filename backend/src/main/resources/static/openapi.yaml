@@ -401,8 +401,6 @@ paths:
         An unknown token returns 404, an expired one returns 410.
         If the file is password protected, the password must be supplied in the
         X-File-Password header; a missing or wrong password returns 401.
-        Repeated wrong passwords for the same token are throttled and answered
-        with 429.
       security: []
       parameters:
         - name: X-File-Password
@@ -436,12 +434,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "410":
           $ref: "#/components/responses/Gone"
-        "429":
-          description: Too many failed password attempts for this link
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /tags:
     get:

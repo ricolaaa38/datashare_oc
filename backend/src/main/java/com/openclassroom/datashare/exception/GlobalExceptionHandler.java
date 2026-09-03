@@ -1,6 +1,9 @@
 package com.openclassroom.datashare.exception;
 
 import com.datashare.model.Error;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -9,8 +12,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.openclassroom.datashare.controller")
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class.getName());
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Error> handleNotFound(ResourceNotFoundException ex) {
@@ -25,6 +30,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Error> handleBadRequest(BadRequestException ex) {
         return build(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Error> handleConflict(ConflictException ex) {
+        return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage());
     }
 
     @ExceptionHandler(InvalidTokenOrPasswordException.class)
