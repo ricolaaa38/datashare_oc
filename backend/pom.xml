@@ -175,7 +175,7 @@
 				<artifactId>openapi-generator-maven-plugin</artifactId>
 				<version>7.4.0</version>
 				<configuration>
-					<inputSpec>src/main/resources/openapi.yaml</inputSpec>
+					<inputSpec>src/main/resources/static/openapi.yaml</inputSpec>
 					<generatorName>spring</generatorName>
 					<apiPackage>com.datashare.api</apiPackage>
 					<modelPackage>com.datashare.model</modelPackage>
