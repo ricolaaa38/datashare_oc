@@ -9,7 +9,6 @@ import com.datashare.model.PagedFiles;
 import com.datashare.model.PresignedUrlResponse;
 import com.openclassroom.datashare.config.CurrentUserProvider;
 import com.openclassroom.datashare.entity.File;
-import com.openclassroom.datashare.entity.FileTag;
 import com.openclassroom.datashare.service.DownloadTokenService;
 import com.openclassroom.datashare.service.FileService;
 import com.openclassroom.datashare.service.FileTagService;
@@ -20,8 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Comparator;
-import java.util.List;
+import static com.openclassroom.datashare.controller.FileResourceMapper.toApiModel;
 
 @RestController
 @RequiredArgsConstructor
@@ -97,27 +95,4 @@ public class FileController implements FilesApi {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
-    /**
-     * Maps the entity to the API contract. {@code storageKey} is deliberately not
-     * exposed: it is an internal bucket coordinate.
-     */
-    private FileResource toApiModel(File file, DownloadTokenService.IssuedToken downloadToken) {
-        List<String> tagNames = file.getTags().stream()
-                .map(FileTag::getName)
-                .sorted(Comparator.naturalOrder())
-                .toList();
-
-        return new FileResource()
-                .fileId(file.getFileId())
-                .ownerId(file.getOwnerId())
-                .originalName(file.getOriginalName())
-                .sizeBytes(file.getSizeBytes())
-                .mimeType(file.getMimeType())
-                .createdAt(file.getCreatedAt())
-                .expiresAt(file.getExpiresAt())
-                .hasPassword(file.getPasswordHash() != null)
-                .tags(tagNames)
-                .downloadToken(downloadToken != null ? downloadToken.token() : null)
-                .downloadUrl(downloadToken != null ? downloadToken.downloadUrl() : null);
-    }
 }

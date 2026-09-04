@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/users", "/auth/login", "/downloads/**").permitAll()
+                        .requestMatchers("/users", "/auth/login", "/downloads/**", "/anonymous/files").permitAll()
                         .requestMatchers("/doc", "/doc/**", "/swagger-ui/**", "/swagger-ui/index.html", "/openapi.yaml", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

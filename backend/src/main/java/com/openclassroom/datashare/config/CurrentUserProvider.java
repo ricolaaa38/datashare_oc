@@ -2,6 +2,7 @@ package com.openclassroom.datashare.config;
 
 import com.openclassroom.datashare.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -25,5 +26,11 @@ public class CurrentUserProvider {
         return userRepository.findByLogin(login)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + login))
                 .getId();
+    }
+
+    public boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
     }
 }
