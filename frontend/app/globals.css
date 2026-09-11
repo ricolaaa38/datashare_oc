@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-dm-sans), "Inter", Arial, Helvetica, sans-serif;
+
+  /* Surfaces */
+  --color-surface-page: #fff8f3;
+  --color-surface-topbar: #ffeee3;
+  --color-surface-row: rgba(255, 193, 145, 0.05);
+  --color-surface-muted: rgba(164, 153, 147, 0.1);
+
+  /* Borders */
+  --color-border-warm: rgba(215, 99, 11, 0.2);
+  --color-border-topbar: rgba(216, 97, 28, 0.29);
+  --color-border-sidebar: rgba(98, 54, 26, 0.15);
+  --color-border-field: #d5d1cd;
+
+  /* Actions */
+  --color-action-dark: #2c2c2c;
+  --color-action-dark-foreground: #f3eeea;
+  --color-action-dark-disabled: #f4eee9;
+  --color-action-primary-surface: rgba(255, 129, 45, 0.13);
+  --color-action-primary-border: rgba(205, 94, 20, 0.5);
+  --color-action-primary-foreground: #ba681f;
+  --color-action-secondary-border: #ffa569;
+  --color-action-secondary-foreground: #e27f29;
+  --color-action-disabled-surface: rgba(183, 167, 156, 0.2);
+  --color-action-disabled-border: rgba(183, 167, 156, 0.2);
+  --color-action-disabled-foreground: #aea49b;
+
+  /* Callouts */
+  --color-callout-info-surface: #e2ecff;
+  --color-callout-info-border: #b1c9f5;
+  --color-callout-info-foreground: #2a3f72;
+  --color-callout-warning-surface: #fff5ed;
+  --color-callout-warning-border: #e6cbb5;
+  --color-callout-warning-foreground: #aa642b;
+  --color-callout-danger-surface: #ffe2e2;
+  --color-callout-danger-border: #e8a6a6;
+  --color-callout-danger-foreground: #9c3333;
+
+  /* Texts */
+  --color-text-expired: #c62020;
+  --color-text-link: #d8640b;
+  --color-text-nav-active: #803a00;
+  --color-text-on-gradient-muted: #f1e9e2;
+  --color-text-placeholder: #b0aba6;
+
+  /* Segmented control */
+  --color-segment-surface: rgba(255, 193, 145, 0.16);
+  --color-segment-active: #e77a6e;
+
+  /* Hero */
+  --color-hero-halo: rgba(47, 25, 13, 0.15);
+  --color-hero-badge: #100218;
+
+  /* Elevation */
+  --shadow-card: 0 0 12px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Warm gradient of the design, vertical on public pages and diagonal on the workspace sidebar. */
+.gradient-warm-vertical {
+  background-image: linear-gradient(174.89deg, #ffb88c 2.29%, #de6262 97.71%);
+}
+
+.gradient-warm-diagonal {
+  background-image: linear-gradient(153.58deg, #ffb88c 2.29%, #de6262 97.71%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  color: #000000;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
