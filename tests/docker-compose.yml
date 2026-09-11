@@ -55,14 +55,36 @@ services:
 
   tests:
     build:
-      context: .
-      dockerfile: dockerfile
+      context: ..
+      dockerfile: tests/dockerfile
     environment:
       BACKEND_URL: http://backend-test:8080
       FRONTEND_URL: http://frontend-test:3000
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      DB_NAME: datashare_test
+      DB_USER: datashare_test
+      DB_PASSWORD: datashare_test
+      S3_ENDPOINT: http://minio-test:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PATH_STYLE_ACCESS: "true"
     depends_on:
-      - backend-test
-      - frontend-test
+      postgres-test:
+        condition: service_healthy
+      minio-test:
+        condition: service_healthy
+      backend-test:
+        condition: service_started
+      frontend-test:
+        condition: service_started
     volumes:
       - ./reports:/workspace/reports
-    command: sh -c "npm run test:e2e && npm run test:perf"
+      - ../backend:/backend
+      - maven-cache:/root/.m2
+    command: >
+      sh -c "cd /backend && sh ./mvnw test -B &&
+             cd /workspace && npm run test:e2e && npm run test:perf"
+
+volumes:
+  maven-cache:

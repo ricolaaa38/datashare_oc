@@ -100,7 +100,9 @@ paths:
         - files
       summary: List files
       description: >
-        Returns files owned by the authenticated user.
+        Returns files owned by the authenticated user, most recent first.
+        Expired files remain listed with status EXPIRED until the scheduled
+        cleanup removes them.
         Anonymous files are not associated with any user and therefore do not
         appear in an authenticated user's file list.
       security:
@@ -708,6 +710,16 @@ components:
             True when password_hash is present in the database.
             The actual password hash is never exposed.
 
+        status:
+          type: string
+          readOnly: true
+          enum:
+            - VALID
+            - EXPIRED
+          description: >
+            State of the download link. EXPIRED means expiresAt is in the past:
+            the link no longer works and the file is awaiting automatic purge.
+
         tags:
           type: array
           readOnly: true
@@ -742,6 +754,8 @@ components:
         - createdAt
         - expiresAt
         - hasPassword
+        - status
+
 
     FileUpdateRequest:
       type: object

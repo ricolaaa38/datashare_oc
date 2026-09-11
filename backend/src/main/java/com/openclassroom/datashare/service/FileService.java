@@ -99,7 +99,7 @@ public class FileService {
 
     @Transactional(readOnly = true)
     public Page<File> listFiles(Long ownerId, int page, int size, String tag, String q) {
-        Specification<File> spec = ownedBy(ownerId).and(notExpired());
+        Specification<File> spec = ownedBy(ownerId);
 
         if (tag != null && !tag.isBlank()) {
             spec = spec.and((root, query, cb) -> {
@@ -119,22 +119,35 @@ public class FileService {
     /**
      * Returns the file only when it belongs to the caller. A file owned by
      * somebody else is reported as "not found" rather than "forbidden" so the API
-     * does not leak the existence of other users' files.
+     * does not leak the existence of other users' files. Expired files are still
+     * returned: they stay visible in the history (US05) until the cleanup job
+     * removes them.
      */
     @Transactional(readOnly = true)
     public File getOwnedFile(Long fileId, Long ownerId) {
         return fileRepository.findByFileIdAndOwnerId(fileId, ownerId)
-                .filter(file -> !file.isExpired(OffsetDateTime.now()))
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
     }
 
+
+    /**
+     * Ownership check only, without the expiration check: used by the operations
+     * that stay legitimate on an expired file, such as deleting it from the
+     * history.
+     */
     @Transactional(readOnly = true)
-    public File requireOwnedFile(Long fileId, Long ownerId) {
+    public File requireOwnedFileEvenIfExpired(Long fileId, Long ownerId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
         if (!java.util.Objects.equals(ownerId, file.getOwnerId())) {
             throw new ForbiddenException("You do not own this file");
         }
+        return file;
+    }
+
+    @Transactional(readOnly = true)
+    public File requireOwnedFile(Long fileId, Long ownerId) {
+        File file = requireOwnedFileEvenIfExpired(fileId, ownerId);
         if (file.isExpired(OffsetDateTime.now())) {
             throw new ResourceNotFoundException("File not found");
         }
@@ -182,7 +195,7 @@ public class FileService {
 
     @Transactional
     public void deleteFile(Long fileId, Long ownerId) {
-        purge(requireOwnedFile(fileId, ownerId));
+        purge(requireOwnedFileEvenIfExpired(fileId, ownerId));
     }
 
     /**
@@ -271,11 +284,6 @@ public class FileService {
 
     private static Specification<File> ownedBy(Long ownerId) {
         return (root, query, cb) -> cb.equal(root.get("ownerId"), ownerId);
-    }
-
-    private static Specification<File> notExpired() {
-        // an expired file is logically gone even if the cleanup job has not run yet
-        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("expiresAt"), OffsetDateTime.now());
     }
 
     private static List<String> normalizeExtensions(String rawExtensions) {

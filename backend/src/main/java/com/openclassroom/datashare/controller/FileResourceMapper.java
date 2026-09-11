@@ -5,6 +5,7 @@ import com.openclassroom.datashare.entity.File;
 import com.openclassroom.datashare.entity.FileTag;
 import com.openclassroom.datashare.service.DownloadTokenService;
 
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -23,6 +24,10 @@ final class FileResourceMapper {
                 .sorted(Comparator.naturalOrder())
                 .toList();
 
+        FileResource.StatusEnum status = file.isExpired(OffsetDateTime.now())
+                ? FileResource.StatusEnum.EXPIRED
+                : FileResource.StatusEnum.VALID;
+
         return new FileResource()
                 .fileId(file.getFileId())
                 .ownerId(file.getOwnerId())
@@ -32,6 +37,7 @@ final class FileResourceMapper {
                 .createdAt(file.getCreatedAt())
                 .expiresAt(file.getExpiresAt())
                 .hasPassword(file.getPasswordHash() != null)
+                .status(status)
                 .tags(tagNames)
                 .downloadToken(downloadToken != null ? downloadToken.token() : null)
                 .downloadUrl(downloadToken != null ? downloadToken.downloadUrl() : null);

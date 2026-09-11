@@ -1,15 +1,20 @@
 FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 
+# JDK pour lancer les tests Maven du backend
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openjdk-21-jdk-headless \
+    && rm -rf /var/lib/apt/lists/*
+
 # k6 pour les tests de performance
 RUN curl -fsSL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
     | tar xz --strip-components 1 -C /usr/local/bin k6-v0.54.0-linux-amd64/k6
 
 WORKDIR /workspace
 
-COPY package.json package-lock.json* ./
+COPY tests/package.json tests/package-lock.json* ./
 RUN npm ci
 
-COPY e2e ./e2e
-COPY perf ./perf
+COPY tests/e2e ./e2e
+COPY tests/perf ./perf
 
 CMD ["bash"]
