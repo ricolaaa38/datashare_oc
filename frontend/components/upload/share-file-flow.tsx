@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { FileUpload } from "@/components/upload/file-upload";
 import { UploadForm } from "@/components/upload/upload-form";
 import { UploadHero } from "@/components/upload/upload-hero";
 import { UploadSuccess } from "@/components/upload/upload-success";
@@ -37,12 +38,9 @@ export function ShareFileFlow() {
     }
   };
 
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setErrorMessage("");
-    }
+  const handleFileAccepted = (file: File) => {
+    setSelectedFile(file);
+    setErrorMessage("");
   };
 
   const handleUpload = async () => {
@@ -95,10 +93,15 @@ export function ShareFileFlow() {
           onSubmit={handleUpload}
         />
       ) : (
-        <UploadHero onSelectFile={openFilePicker} />
+        <UploadHero errorMessage={errorMessage} onSelectFile={openFilePicker} />
       )}
 
-      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
+      <FileUpload
+        ref={fileInputRef}
+        className="hidden"
+        onFileAccepted={handleFileAccepted}
+        onError={setErrorMessage}
+      />
     </>
   );
 }
