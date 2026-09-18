@@ -54,6 +54,17 @@ export function formatExpirySentence(expiresAt: string): string {
     : `Ce fichier expirera dans ${remainingDays} jours.`;
 }
 
+/** The account only stores a login (usually an email), so we derive a friendlier display name from it. */
+export function formatDisplayName(login: string): string {
+  const localPart = login.split("@")[0] ?? login;
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 /** Shareable link pointing at the DataShare download page rather than the raw API endpoint. */
 export function buildShareLink(downloadToken: string): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
