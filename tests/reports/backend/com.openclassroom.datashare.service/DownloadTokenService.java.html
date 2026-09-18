@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DownloadTokenService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">DownloadTokenService.java</span></div><h1>DownloadTokenService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import com.openclassroom.datashare.entity.DownloadToken;
+import com.openclassroom.datashare.entity.File;
+import com.openclassroom.datashare.exception.ResourceNotFoundException;
+import com.openclassroom.datashare.repository.DownloadTokenRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.OffsetDateTime;
+import java.util.Base64;
+import java.util.HexFormat;
+
+/**
+ * Single owner of the download-token lifecycle: generation, hashing, rotation
+ * and resolution. The raw token is returned to the caller only once; only its
+ * SHA-256 hash is persisted.
+ */
+@Service
+@RequiredArgsConstructor
+public class DownloadTokenService {
+
+<span class="fc" id="L30">    private static final SecureRandom SECURE_RANDOM = new SecureRandom();</span>
+    private static final int TOKEN_BYTES = 32;
+
+    private final DownloadTokenRepository downloadTokenRepository;
+
+    @Value(&quot;${app.public-url:http://localhost:8080}&quot;)
+    private String publicUrl;
+
+    /**
+     * Issues a token for the file, replacing (and therefore invalidating) any
+     * previous one, since the data model allows a single token per file.
+     */
+    @Transactional
+    public IssuedToken issueFor(File file) {
+        // flush so the DELETE reaches the database before the INSERT below,
+        // which Hibernate would otherwise order the other way around
+<span class="fc" id="L46">        downloadTokenRepository.findByFile_FileId(file.getFileId()).ifPresent(existing -&gt; {</span>
+<span class="fc" id="L47">            downloadTokenRepository.delete(existing);</span>
+<span class="fc" id="L48">            downloadTokenRepository.flush();</span>
+<span class="fc" id="L49">        });</span>
+
+<span class="fc" id="L51">        byte[] tokenBytes = new byte[TOKEN_BYTES];</span>
+<span class="fc" id="L52">        SECURE_RANDOM.nextBytes(tokenBytes);</span>
+<span class="fc" id="L53">        String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);</span>
+
+<span class="fc" id="L55">        DownloadToken downloadToken = new DownloadToken();</span>
+<span class="fc" id="L56">        downloadToken.setFile(file);</span>
+<span class="fc" id="L57">        downloadToken.setTokenHash(hash(rawToken));</span>
+<span class="fc" id="L58">        downloadToken = downloadTokenRepository.save(downloadToken);</span>
+
+<span class="fc" id="L60">        URI downloadUrl = URI.create(publicUrl + &quot;/downloads/&quot; + rawToken);</span>
+<span class="fc" id="L61">        return new IssuedToken(rawToken, downloadUrl, downloadToken.getCreatedAt());</span>
+    }
+
+    /**
+     * Resolves the token to its download link. An unknown token is reported as
+     * &quot;not found&quot; so the recipient gets an explicit error, distinct from a wrong
+     * password. This does not help enumeration: the token is 256 bits of entropy.
+     */
+    @Transactional(readOnly = true)
+    public DownloadToken resolve(String rawToken) {
+<span class="pc bpc" id="L71" title="2 of 4 branches missed.">        if (rawToken == null || rawToken.isBlank()) {</span>
+<span class="nc" id="L72">            throw new ResourceNotFoundException(&quot;This download link is invalid or no longer exists&quot;);</span>
+        }
+<span class="fc" id="L74">        return downloadTokenRepository.findByTokenHash(hash(rawToken))</span>
+<span class="fc" id="L75">                .orElseThrow(() -&gt; new ResourceNotFoundException(</span>
+                        &quot;This download link is invalid or no longer exists&quot;));
+    }
+
+    @Transactional
+    public void deleteFor(Long fileId) {
+<span class="fc" id="L81">        downloadTokenRepository.findByFile_FileId(fileId).ifPresent(downloadTokenRepository::delete);</span>
+<span class="fc" id="L82">        downloadTokenRepository.flush();</span>
+<span class="fc" id="L83">    }</span>
+
+    private String hash(String rawToken) {
+        try {
+<span class="fc" id="L87">            MessageDigest digest = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L88">            return HexFormat.of().formatHex(digest.digest(rawToken.getBytes(StandardCharsets.UTF_8)));</span>
+<span class="nc" id="L89">        } catch (NoSuchAlgorithmException e) {</span>
+<span class="nc" id="L90">            throw new IllegalStateException(&quot;SHA-256 algorithm not available&quot;, e);</span>
+        }
+    }
+
+<span class="fc" id="L94">    public record IssuedToken(String token, URI downloadUrl, OffsetDateTime createdAt) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

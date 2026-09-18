@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DownloadService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">DownloadService.java</span></div><h1>DownloadService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import com.openclassroom.datashare.entity.File;
+import com.openclassroom.datashare.exception.FileExpiredException;
+import com.openclassroom.datashare.exception.InvalidTokenOrPasswordException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+
+/**
+ * Serves US02: anyone holding a valid link can see what is shared and download
+ * it, providing the password when the file is protected.
+ */
+@Service
+@RequiredArgsConstructor
+public class DownloadService {
+
+    private final DownloadTokenService downloadTokenService;
+    private final FileStorageService storageService;
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Metadata shown to the recipient before downloading. Deliberately requires
+     * no password: it only reveals what the sender chose to share, and the
+     * {@code hasPassword} flag is what lets the client decide whether to prompt
+     * for one.
+     */
+    @Transactional(readOnly = true)
+    public File describeByToken(String rawToken) {
+<span class="fc" id="L36">        File file = downloadTokenService.resolve(rawToken).getFile();</span>
+<span class="fc" id="L37">        requireNotExpired(file);</span>
+<span class="fc" id="L38">        return file;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public DownloadResult downloadByToken(String rawToken, String password) {
+
+<span class="fc" id="L44">        File file = downloadTokenService.resolve(rawToken).getFile();</span>
+<span class="fc" id="L45">        requireNotExpired(file);</span>
+<span class="fc" id="L46">        requireValidPassword(file, password);</span>
+
+        // the stream stays open until the response body has been written, so it is
+        // only closed here when building the result fails
+<span class="fc" id="L50">        var content = storageService.load(file.getStorageKey());</span>
+        try {
+<span class="fc" id="L52">            return new DownloadResult(new InputStreamResource(content), file);</span>
+<span class="nc" id="L53">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L54">            closeQuietly(content);</span>
+<span class="nc" id="L55">            throw e;</span>
+        }
+    }
+
+    private void requireNotExpired(File file) {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (file.isExpired(OffsetDateTime.now())) {</span>
+            // the scheduled cleanup deletes the content shortly after expiry; refuse
+            // the link immediately so an expired one is never served
+<span class="fc" id="L63">            throw new FileExpiredException(&quot;This link has expired and the file is no longer available&quot;);</span>
+        }
+<span class="fc" id="L65">    }</span>
+
+    private void requireValidPassword(File file, String password) {
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (file.getPasswordHash() == null) {</span>
+<span class="fc" id="L69">            return;</span>
+        }
+<span class="fc bfc" id="L71" title="All 4 branches covered.">        if (password == null || password.isBlank()) {</span>
+<span class="fc" id="L72">            throw new InvalidTokenOrPasswordException(&quot;This file is password protected, a password is required&quot;);</span>
+        }
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (!passwordEncoder.matches(password, file.getPasswordHash())) {</span>
+<span class="fc" id="L75">            throw new InvalidTokenOrPasswordException(&quot;The supplied password is incorrect&quot;);</span>
+        }
+<span class="fc" id="L77">    }</span>
+
+    private void closeQuietly(Closeable closeable) {
+        try {
+<span class="nc" id="L81">            closeable.close();</span>
+<span class="nc" id="L82">        } catch (IOException ignored) {</span>
+            // nothing useful to do: the original failure is the one worth reporting
+<span class="nc" id="L84">        }</span>
+<span class="nc" id="L85">    }</span>
+
+<span class="fc" id="L87">    public record DownloadResult(InputStreamResource resource, File file) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

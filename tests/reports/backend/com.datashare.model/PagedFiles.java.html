@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PagedFiles.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.datashare.model</a> &gt; <span class="el_source">PagedFiles.java</span></div><h1>PagedFiles.java</h1><pre class="source lang-java linenums">package com.datashare.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.datashare.model.FileResource;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * PagedFiles
+ */
+
+@Generated(value = &quot;org.openapitools.codegen.languages.SpringCodegen&quot;, date = &quot;2026-09-18T14:19:44.601841100+02:00[Europe/Paris]&quot;, comments = &quot;Generator version: 7.4.0&quot;)
+public class PagedFiles {
+
+  private Integer total;
+
+  private Integer page;
+
+  private Integer size;
+
+<span class="pc" id="L34">  @Valid</span>
+  private List&lt;@Valid FileResource&gt; items = new ArrayList&lt;&gt;();
+
+  public PagedFiles() {
+<span class="fc" id="L38">    super();</span>
+<span class="fc" id="L39">  }</span>
+
+  /**
+   * Constructor with only required parameters
+   */
+<span class="nc" id="L44">  public PagedFiles(Integer total, Integer page, Integer size, List&lt;@Valid FileResource&gt; items) {</span>
+<span class="nc" id="L45">    this.total = total;</span>
+<span class="nc" id="L46">    this.page = page;</span>
+<span class="nc" id="L47">    this.size = size;</span>
+<span class="nc" id="L48">    this.items = items;</span>
+<span class="nc" id="L49">  }</span>
+
+  public PagedFiles total(Integer total) {
+<span class="fc" id="L52">    this.total = total;</span>
+<span class="fc" id="L53">    return this;</span>
+  }
+
+  /**
+   * Get total
+   * minimum: 0
+   * @return total
+  */
+  @NotNull @Min(0) 
+  @Schema(name = &quot;total&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;total&quot;)
+  public Integer getTotal() {
+<span class="fc" id="L65">    return total;</span>
+  }
+
+  public void setTotal(Integer total) {
+<span class="nc" id="L69">    this.total = total;</span>
+<span class="nc" id="L70">  }</span>
+
+  public PagedFiles page(Integer page) {
+<span class="fc" id="L73">    this.page = page;</span>
+<span class="fc" id="L74">    return this;</span>
+  }
+
+  /**
+   * Get page
+   * minimum: 0
+   * @return page
+  */
+  @NotNull @Min(0) 
+  @Schema(name = &quot;page&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;page&quot;)
+  public Integer getPage() {
+<span class="fc" id="L86">    return page;</span>
+  }
+
+  public void setPage(Integer page) {
+<span class="nc" id="L90">    this.page = page;</span>
+<span class="nc" id="L91">  }</span>
+
+  public PagedFiles size(Integer size) {
+<span class="fc" id="L94">    this.size = size;</span>
+<span class="fc" id="L95">    return this;</span>
+  }
+
+  /**
+   * Get size
+   * minimum: 1
+   * @return size
+  */
+  @NotNull @Min(1) 
+  @Schema(name = &quot;size&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;size&quot;)
+  public Integer getSize() {
+<span class="fc" id="L107">    return size;</span>
+  }
+
+  public void setSize(Integer size) {
+<span class="nc" id="L111">    this.size = size;</span>
+<span class="nc" id="L112">  }</span>
+
+  public PagedFiles items(List&lt;@Valid FileResource&gt; items) {
+<span class="fc" id="L115">    this.items = items;</span>
+<span class="fc" id="L116">    return this;</span>
+  }
+
+  public PagedFiles addItemsItem(FileResource itemsItem) {
+<span class="nc bnc" id="L120" title="All 2 branches missed.">    if (this.items == null) {</span>
+<span class="nc" id="L121">      this.items = new ArrayList&lt;&gt;();</span>
+    }
+<span class="nc" id="L123">    this.items.add(itemsItem);</span>
+<span class="nc" id="L124">    return this;</span>
+  }
+
+  /**
+   * Get items
+   * @return items
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;items&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;items&quot;)
+  public List&lt;@Valid FileResource&gt; getItems() {
+<span class="fc" id="L135">    return items;</span>
+  }
+
+  public void setItems(List&lt;@Valid FileResource&gt; items) {
+<span class="nc" id="L139">    this.items = items;</span>
+<span class="nc" id="L140">  }</span>
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L144" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L145">      return true;</span>
+    }
+<span class="nc bnc" id="L147" title="All 4 branches missed.">    if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L148">      return false;</span>
+    }
+<span class="nc" id="L150">    PagedFiles pagedFiles = (PagedFiles) o;</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">    return Objects.equals(this.total, pagedFiles.total) &amp;&amp;</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        Objects.equals(this.page, pagedFiles.page) &amp;&amp;</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        Objects.equals(this.size, pagedFiles.size) &amp;&amp;</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        Objects.equals(this.items, pagedFiles.items);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L159">    return Objects.hash(total, page, size, items);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L164">    StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L165">    sb.append(&quot;class PagedFiles {\n&quot;);</span>
+<span class="nc" id="L166">    sb.append(&quot;    total: &quot;).append(toIndentedString(total)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L167">    sb.append(&quot;    page: &quot;).append(toIndentedString(page)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L168">    sb.append(&quot;    size: &quot;).append(toIndentedString(size)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L169">    sb.append(&quot;    items: &quot;).append(toIndentedString(items)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L170">    sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L171">    return sb.toString();</span>
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+<span class="nc bnc" id="L179" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L180">      return &quot;null&quot;;</span>
+    }
+<span class="nc" id="L182">    return o.toString().replace(&quot;\n&quot;, &quot;\n    &quot;);</span>
+  }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

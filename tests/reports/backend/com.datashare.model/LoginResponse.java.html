@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoginResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.datashare.model</a> &gt; <span class="el_source">LoginResponse.java</span></div><h1>LoginResponse.java</h1><pre class="source lang-java linenums">package com.datashare.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.datashare.model.User;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * LoginResponse
+ */
+
+@Generated(value = &quot;org.openapitools.codegen.languages.SpringCodegen&quot;, date = &quot;2026-09-18T14:19:44.601841100+02:00[Europe/Paris]&quot;, comments = &quot;Generator version: 7.4.0&quot;)
+public class LoginResponse {
+
+  private String accessToken;
+
+  private User user;
+
+  public LoginResponse() {
+<span class="fc" id="L30">    super();</span>
+<span class="fc" id="L31">  }</span>
+
+  /**
+   * Constructor with only required parameters
+   */
+<span class="nc" id="L36">  public LoginResponse(String accessToken, User user) {</span>
+<span class="nc" id="L37">    this.accessToken = accessToken;</span>
+<span class="nc" id="L38">    this.user = user;</span>
+<span class="nc" id="L39">  }</span>
+
+  public LoginResponse accessToken(String accessToken) {
+<span class="fc" id="L42">    this.accessToken = accessToken;</span>
+<span class="fc" id="L43">    return this;</span>
+  }
+
+  /**
+   * Get accessToken
+   * @return accessToken
+  */
+  @NotNull 
+  @Schema(name = &quot;accessToken&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;accessToken&quot;)
+  public String getAccessToken() {
+<span class="fc" id="L54">    return accessToken;</span>
+  }
+
+  public void setAccessToken(String accessToken) {
+<span class="nc" id="L58">    this.accessToken = accessToken;</span>
+<span class="nc" id="L59">  }</span>
+
+  public LoginResponse user(User user) {
+<span class="fc" id="L62">    this.user = user;</span>
+<span class="fc" id="L63">    return this;</span>
+  }
+
+  /**
+   * Get user
+   * @return user
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;user&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;user&quot;)
+  public User getUser() {
+<span class="fc" id="L74">    return user;</span>
+  }
+
+  public void setUser(User user) {
+<span class="nc" id="L78">    this.user = user;</span>
+<span class="nc" id="L79">  }</span>
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L83" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L84">      return true;</span>
+    }
+<span class="nc bnc" id="L86" title="All 4 branches missed.">    if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L87">      return false;</span>
+    }
+<span class="nc" id="L89">    LoginResponse loginResponse = (LoginResponse) o;</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">    return Objects.equals(this.accessToken, loginResponse.accessToken) &amp;&amp;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        Objects.equals(this.user, loginResponse.user);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L96">    return Objects.hash(accessToken, user);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L101">    StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L102">    sb.append(&quot;class LoginResponse {\n&quot;);</span>
+<span class="nc" id="L103">    sb.append(&quot;    accessToken: &quot;).append(toIndentedString(accessToken)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L104">    sb.append(&quot;    user: &quot;).append(toIndentedString(user)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L105">    sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L106">    return sb.toString();</span>
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+<span class="nc bnc" id="L114" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L115">      return &quot;null&quot;;</span>
+    }
+<span class="nc" id="L117">    return o.toString().replace(&quot;\n&quot;, &quot;\n    &quot;);</span>
+  }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

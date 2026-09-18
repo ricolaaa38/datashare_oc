@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileStorageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">FileStorageService.java</span></div><h1>FileStorageService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+/**
+ * Thin wrapper around the S3 client used to store and retrieve file content.
+ */
+@Service
+public class FileStorageService {
+
+    private final S3Client s3Client;
+    private final String bucket;
+
+<span class="fc" id="L24">    public FileStorageService(S3Client s3Client, @Value(&quot;${aws.s3.bucket:datashare-files}&quot;) String bucket) {</span>
+<span class="fc" id="L25">        this.s3Client = s3Client;</span>
+<span class="fc" id="L26">        this.bucket = bucket;</span>
+<span class="fc" id="L27">    }</span>
+
+    @PostConstruct
+    void ensureBucketExists() {
+        try {
+<span class="fc" id="L32">            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());</span>
+<span class="nc" id="L33">        } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {</span>
+<span class="nc" id="L34">            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());</span>
+<span class="fc" id="L35">        }</span>
+<span class="fc" id="L36">    }</span>
+
+    public void store(MultipartFile file, String key, String contentType) {
+        try {
+<span class="fc" id="L40">            PutObjectRequest request = PutObjectRequest.builder()</span>
+<span class="fc" id="L41">                    .bucket(bucket)</span>
+<span class="fc" id="L42">                    .key(key)</span>
+<span class="fc" id="L43">                    .contentType(contentType)</span>
+<span class="fc" id="L44">                    .contentLength(file.getSize())</span>
+<span class="fc" id="L45">                    .build();</span>
+<span class="fc" id="L46">            s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));</span>
+<span class="nc" id="L47">        } catch (IOException e) {</span>
+<span class="nc" id="L48">            throw new UncheckedIOException(&quot;Unable to read uploaded file content&quot;, e);</span>
+<span class="fc" id="L49">        }</span>
+<span class="fc" id="L50">    }</span>
+
+    public ResponseInputStream&lt;GetObjectResponse&gt; load(String key) {
+<span class="fc" id="L53">        return s3Client.getObject(GetObjectRequest.builder().bucket(bucket).key(key).build());</span>
+    }
+
+    public void delete(String key) {
+<span class="fc" id="L57">        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());</span>
+<span class="fc" id="L58">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

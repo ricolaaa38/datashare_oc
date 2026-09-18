@@ -16,5 +16,10 @@ RUN npm ci
 
 COPY tests/e2e ./e2e
 COPY tests/perf ./perf
+COPY tests/playwright.config.ts ./
+
+COPY frontend/package.json frontend/package-lock.json /frontend/
+RUN cd /frontend && npm ci
+COPY frontend /frontend
 
 CMD ["bash"]

@@ -1,0 +1,16 @@
+<testsuites id="" name="" tests="5" failures="0" skipped="0" errors="0" time="4.735543">
+<testsuite name="critical-flows.spec.ts" timestamp="2026-09-18T13:02:42.889Z" hostname="" tests="3" failures="0" skipped="0" time="4.032" errors="0">
+<testcase name="Fonctionnalités critiques › un visiteur peut partager un fichier sans compte et le télécharger" classname="critical-flows.spec.ts" time="1.52">
+</testcase>
+<testcase name="Fonctionnalités critiques › un utilisateur peut créer un compte, se connecter, ajouter un fichier et le retrouver dans son espace" classname="critical-flows.spec.ts" time="1.683">
+</testcase>
+<testcase name="Fonctionnalités critiques › une mauvaise combinaison identifiant/mot de passe est rejetée avec un message clair" classname="critical-flows.spec.ts" time="0.829">
+</testcase>
+</testsuite>
+<testsuite name="home.spec.ts" timestamp="2026-09-18T13:02:42.889Z" hostname="" tests="2" failures="0" skipped="0" time="0.481" errors="0">
+<testcase name="la page d&apos;accueil se charge" classname="home.spec.ts" time="0.223">
+</testcase>
+<testcase name="les pages publiques d&apos;authentification sont accessibles" classname="home.spec.ts" time="0.258">
+</testcase>
+</testsuite>
+</testsuites>

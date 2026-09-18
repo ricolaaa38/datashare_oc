@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DownloadToken.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.datashare.model</a> &gt; <span class="el_source">DownloadToken.java</span></div><h1>DownloadToken.java</h1><pre class="source lang-java linenums">package com.datashare.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * DOWNLOAD_TOKEN entity. token_hash is stored instead of the raw token. fileId is unique because one file can have only one download token. 
+ */
+
+@Schema(name = &quot;DownloadToken&quot;, description = &quot;DOWNLOAD_TOKEN entity. token_hash is stored instead of the raw token. fileId is unique because one file can have only one download token. &quot;)
+@Generated(value = &quot;org.openapitools.codegen.languages.SpringCodegen&quot;, date = &quot;2026-09-18T14:19:44.601841100+02:00[Europe/Paris]&quot;, comments = &quot;Generator version: 7.4.0&quot;)
+public class DownloadToken {
+
+  private Long tokenId;
+
+  private Long fileId;
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime createdAt;
+
+  public DownloadToken() {
+<span class="nc" id="L35">    super();</span>
+<span class="nc" id="L36">  }</span>
+
+  /**
+   * Constructor with only required parameters
+   */
+<span class="nc" id="L41">  public DownloadToken(Long tokenId, Long fileId, OffsetDateTime createdAt) {</span>
+<span class="nc" id="L42">    this.tokenId = tokenId;</span>
+<span class="nc" id="L43">    this.fileId = fileId;</span>
+<span class="nc" id="L44">    this.createdAt = createdAt;</span>
+<span class="nc" id="L45">  }</span>
+
+  public DownloadToken tokenId(Long tokenId) {
+<span class="nc" id="L48">    this.tokenId = tokenId;</span>
+<span class="nc" id="L49">    return this;</span>
+  }
+
+  /**
+   * Get tokenId
+   * minimum: 1
+   * @return tokenId
+  */
+  @NotNull @Min(1L) 
+  @Schema(name = &quot;tokenId&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;tokenId&quot;)
+  public Long getTokenId() {
+<span class="nc" id="L61">    return tokenId;</span>
+  }
+
+  public void setTokenId(Long tokenId) {
+<span class="nc" id="L65">    this.tokenId = tokenId;</span>
+<span class="nc" id="L66">  }</span>
+
+  public DownloadToken fileId(Long fileId) {
+<span class="nc" id="L69">    this.fileId = fileId;</span>
+<span class="nc" id="L70">    return this;</span>
+  }
+
+  /**
+   * Get fileId
+   * minimum: 1
+   * @return fileId
+  */
+  @NotNull @Min(1L) 
+  @Schema(name = &quot;fileId&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;fileId&quot;)
+  public Long getFileId() {
+<span class="nc" id="L82">    return fileId;</span>
+  }
+
+  public void setFileId(Long fileId) {
+<span class="nc" id="L86">    this.fileId = fileId;</span>
+<span class="nc" id="L87">  }</span>
+
+  public DownloadToken createdAt(OffsetDateTime createdAt) {
+<span class="nc" id="L90">    this.createdAt = createdAt;</span>
+<span class="nc" id="L91">    return this;</span>
+  }
+
+  /**
+   * Get createdAt
+   * @return createdAt
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;createdAt&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;createdAt&quot;)
+  public OffsetDateTime getCreatedAt() {
+<span class="nc" id="L102">    return createdAt;</span>
+  }
+
+  public void setCreatedAt(OffsetDateTime createdAt) {
+<span class="nc" id="L106">    this.createdAt = createdAt;</span>
+<span class="nc" id="L107">  }</span>
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L111" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L112">      return true;</span>
+    }
+<span class="nc bnc" id="L114" title="All 4 branches missed.">    if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L115">      return false;</span>
+    }
+<span class="nc" id="L117">    DownloadToken downloadToken = (DownloadToken) o;</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">    return Objects.equals(this.tokenId, downloadToken.tokenId) &amp;&amp;</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        Objects.equals(this.fileId, downloadToken.fileId) &amp;&amp;</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        Objects.equals(this.createdAt, downloadToken.createdAt);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L125">    return Objects.hash(tokenId, fileId, createdAt);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L130">    StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L131">    sb.append(&quot;class DownloadToken {\n&quot;);</span>
+<span class="nc" id="L132">    sb.append(&quot;    tokenId: &quot;).append(toIndentedString(tokenId)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L133">    sb.append(&quot;    fileId: &quot;).append(toIndentedString(fileId)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L134">    sb.append(&quot;    createdAt: &quot;).append(toIndentedString(createdAt)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L135">    sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L136">    return sb.toString();</span>
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+<span class="nc bnc" id="L144" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L145">      return &quot;null&quot;;</span>
+    }
+<span class="nc" id="L147">    return o.toString().replace(&quot;\n&quot;, &quot;\n    &quot;);</span>
+  }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

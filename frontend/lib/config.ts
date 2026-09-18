@@ -10,7 +10,11 @@ export const ROUTES = {
 
 export const RETENTION_OPTIONS = [
   { days: 1, label: "Une journée" },
+  { days: 2, label: "2 jours" },
   { days: 3, label: "3 jours" },
+  { days: 4, label: "4 jours" },
+  { days: 5, label: "5 jours" },
+  { days: 6, label: "6 jours" },
   { days: 7, label: "Une semaine" },
 ] as const;
 

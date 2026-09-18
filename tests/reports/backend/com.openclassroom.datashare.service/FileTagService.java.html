@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileTagService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">FileTagService.java</span></div><h1>FileTagService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import com.openclassroom.datashare.entity.FileTag;
+import com.openclassroom.datashare.exception.BadRequestException;
+import com.openclassroom.datashare.exception.ConflictException;
+import com.openclassroom.datashare.repository.FileTagRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Owns the lifecycle of user tags. Tags are per-user: two users may use the same
+ * tag name without sharing the same row.
+ */
+@Service
+@RequiredArgsConstructor
+public class FileTagService {
+
+    private final FileTagRepository fileTagRepository;
+
+    @Transactional(readOnly = true)
+    public List&lt;FileTag&gt; listTags(Long userId, int page, int size) {
+<span class="nc" id="L31">        return fileTagRepository.findAllByUserIdOrderByNameAsc(userId, PageRequest.of(page, size)).getContent();</span>
+    }
+
+    @Transactional
+    public FileTag createTag(Long userId, String rawName) {
+<span class="fc" id="L36">        String name = normalize(rawName);</span>
+<span class="nc" id="L37">        fileTagRepository.findByUserIdAndNameIgnoreCase(userId, name).ifPresent(existing -&gt; {</span>
+<span class="fc" id="L38">            throw new ConflictException(&quot;A tag named '&quot; + name + &quot;' already exists&quot;);</span>
+        });
+        try {
+<span class="nc" id="L41">            return fileTagRepository.save(new FileTag(userId, name));</span>
+<span class="nc" id="L42">        } catch (DataIntegrityViolationException e) {</span>
+            // lost the race against a concurrent request creating the same tag
+<span class="nc" id="L44">            throw new ConflictException(&quot;A tag named '&quot; + name + &quot;' already exists&quot;);</span>
+        }
+    }
+
+    /**
+     * Resolves the supplied tag names for the user, creating the missing ones.
+     * Returns an empty set for anonymous uploads, which have no owner to attach
+     * tags to.
+     */
+    @Transactional
+    public Set&lt;FileTag&gt; resolveOrCreate(Long userId, Collection&lt;String&gt; rawNames) {
+<span class="pc bpc" id="L55" title="1 of 6 branches missed.">        if (userId == null || rawNames == null || rawNames.isEmpty()) {</span>
+<span class="fc" id="L56">            return Set.of();</span>
+        }
+<span class="fc" id="L58">        Set&lt;FileTag&gt; resolved = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        for (String uniqueName : distinctNormalized(rawNames)) {</span>
+<span class="fc" id="L60">            resolved.add(fileTagRepository.findByUserIdAndNameIgnoreCase(userId, uniqueName)</span>
+<span class="pc" id="L61">                    .orElseGet(() -&gt; fileTagRepository.save(new FileTag(userId, uniqueName))));</span>
+<span class="fc" id="L62">        }</span>
+<span class="fc" id="L63">        return resolved;</span>
+    }
+
+    /**
+     * Parses the comma-separated {@code tags} field accepted by the multipart
+     * upload endpoint.
+     */
+    public static List&lt;String&gt; parseCommaSeparated(String rawTags) {
+<span class="fc bfc" id="L71" title="All 4 branches covered.">        if (rawTags == null || rawTags.isBlank()) {</span>
+<span class="fc" id="L72">            return List.of();</span>
+        }
+<span class="fc" id="L74">        return List.of(rawTags.split(&quot;,&quot;));</span>
+    }
+
+    private Set&lt;String&gt; distinctNormalized(Collection&lt;String&gt; rawNames) {
+<span class="fc" id="L78">        Set&lt;String&gt; seen = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc" id="L79">        Set&lt;String&gt; lowercased = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        for (String rawName : rawNames) {</span>
+<span class="pc bpc" id="L81" title="1 of 4 branches missed.">            if (rawName == null || rawName.isBlank()) {</span>
+<span class="fc" id="L82">                continue;</span>
+            }
+<span class="fc" id="L84">            String name = normalize(rawName);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">            if (lowercased.add(name.toLowerCase(Locale.ROOT))) {</span>
+<span class="fc" id="L86">                seen.add(name);</span>
+            }
+<span class="fc" id="L88">        }</span>
+<span class="fc" id="L89">        return seen;</span>
+    }
+
+    private String normalize(String rawName) {
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        String name = rawName == null ? &quot;&quot; : rawName.trim();</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        if (name.isEmpty()) {</span>
+<span class="fc" id="L95">            throw new BadRequestException(&quot;A tag name must not be blank&quot;);</span>
+        }
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        if (name.length() &gt; FileTag.MAX_NAME_LENGTH) {</span>
+<span class="fc" id="L98">            throw new BadRequestException(</span>
+                    &quot;A tag name must not exceed &quot; + FileTag.MAX_NAME_LENGTH + &quot; characters&quot;);
+        }
+<span class="fc" id="L101">        return name;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

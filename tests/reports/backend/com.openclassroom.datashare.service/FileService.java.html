@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">FileService.java</span></div><h1>FileService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import com.openclassroom.datashare.entity.File;
+import com.openclassroom.datashare.entity.FileTag;
+import com.openclassroom.datashare.exception.BadRequestException;
+import com.openclassroom.datashare.exception.ForbiddenException;
+import com.openclassroom.datashare.exception.PayloadTooLargeException;
+import com.openclassroom.datashare.exception.ResourceNotFoundException;
+import com.openclassroom.datashare.repository.FileRepository;
+import jakarta.persistence.criteria.JoinType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Paths;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Business rules of US01: an authenticated user uploads a file, gets a unique
+ * download link, and finds the file again in a personal history.
+ */
+@Service
+public class FileService {
+
+    public static final long MAX_SIZE_BYTES = 1024L * 1024L * 1024L; // 1 GB
+    public static final int MAX_EXPIRATION_DAYS = 7;
+    public static final int DEFAULT_EXPIRATION_DAYS = 7;
+    public static final int MIN_PASSWORD_LENGTH = 6;
+    private static final String DEFAULT_MIME_TYPE = &quot;application/octet-stream&quot;;
+
+    private final FileRepository fileRepository;
+    private final DownloadTokenService downloadTokenService;
+    private final FileTagService fileTagService;
+    private final FileStorageService storageService;
+    private final PasswordEncoder passwordEncoder;
+    private final List&lt;String&gt; forbiddenExtensions;
+
+    public FileService(FileRepository fileRepository,
+            DownloadTokenService downloadTokenService,
+            FileTagService fileTagService,
+            FileStorageService storageService,
+            PasswordEncoder passwordEncoder,
+<span class="fc" id="L54">            @Value(&quot;${app.upload.forbidden-extensions:.exe,.bat,.cmd,.sh,.msi,.dll,.com,.scr,.jar,.vbs,.ps1}&quot;) String forbiddenExtensions) {</span>
+<span class="fc" id="L55">        this.fileRepository = fileRepository;</span>
+<span class="fc" id="L56">        this.downloadTokenService = downloadTokenService;</span>
+<span class="fc" id="L57">        this.fileTagService = fileTagService;</span>
+<span class="fc" id="L58">        this.storageService = storageService;</span>
+<span class="fc" id="L59">        this.passwordEncoder = passwordEncoder;</span>
+<span class="fc" id="L60">        this.forbiddenExtensions = normalizeExtensions(forbiddenExtensions);</span>
+<span class="fc" id="L61">    }</span>
+
+    @Transactional
+    public UploadResult upload(UploadCommand command) {
+<span class="fc" id="L65">        MultipartFile file = command.file();</span>
+<span class="fc" id="L66">        String originalName = resolveOriginalName(command.originalName(), file);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        int expiresInDays = command.expiresInDays() == null ? DEFAULT_EXPIRATION_DAYS : command.expiresInDays();</span>
+
+<span class="fc" id="L69">        validateUpload(file, originalName, expiresInDays, command.password());</span>
+
+<span class="fc" id="L71">        String storageKey = &quot;files/&quot; + UUID.randomUUID() + &quot;-&quot; + sanitize(originalName);</span>
+<span class="fc" id="L72">        String mimeType = resolveMimeType(command.mimeType(), file);</span>
+<span class="fc" id="L73">        Set&lt;FileTag&gt; tags = fileTagService.resolveOrCreate(command.ownerId(), command.tags());</span>
+
+<span class="fc" id="L75">        storageService.store(file, storageKey, mimeType);</span>
+        try {
+<span class="fc" id="L77">            File entity = new File();</span>
+<span class="fc" id="L78">            entity.setOwnerId(command.ownerId());</span>
+<span class="fc" id="L79">            entity.setOriginalName(originalName);</span>
+<span class="fc" id="L80">            entity.setMimeType(mimeType);</span>
+<span class="fc" id="L81">            entity.setSizeBytes(file.getSize());</span>
+<span class="fc" id="L82">            entity.setStorageKey(storageKey);</span>
+<span class="fc" id="L83">            entity.setExpiresAt(OffsetDateTime.now().plusDays(expiresInDays));</span>
+<span class="fc" id="L84">            entity.setTags(tags);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">            if (hasPassword(command.password())) {</span>
+<span class="fc" id="L86">                entity.setPasswordHash(passwordEncoder.encode(command.password()));</span>
+            }
+
+<span class="fc" id="L89">            entity = fileRepository.save(entity);</span>
+            // the download link is issued right away so the caller does not need a
+            // second round trip to share the file
+<span class="fc" id="L92">            return new UploadResult(entity, downloadTokenService.issueFor(entity));</span>
+<span class="fc" id="L93">        } catch (RuntimeException e) {</span>
+            // never leave an orphan object behind in the bucket
+<span class="fc" id="L95">            storageService.delete(storageKey);</span>
+<span class="fc" id="L96">            throw e;</span>
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;File&gt; listFiles(Long ownerId, int page, int size, String tag, String q) {
+<span class="fc" id="L102">        Specification&lt;File&gt; spec = ownedBy(ownerId);</span>
+
+<span class="pc bpc" id="L104" title="3 of 4 branches missed.">        if (tag != null &amp;&amp; !tag.isBlank()) {</span>
+<span class="nc" id="L105">            spec = spec.and((root, query, cb) -&gt; {</span>
+                // a file may match several rows through the FILE_TAG join
+<span class="nc" id="L107">                query.distinct(true);</span>
+<span class="nc" id="L108">                return cb.equal(cb.lower(root.join(&quot;tags&quot;, JoinType.INNER).get(&quot;name&quot;)), tag.toLowerCase(Locale.ROOT));</span>
+            });
+        }
+<span class="pc bpc" id="L111" title="3 of 4 branches missed.">        if (q != null &amp;&amp; !q.isBlank()) {</span>
+<span class="nc" id="L112">            spec = spec.and((root, query, cb) -&gt; cb.like(cb.lower(root.get(&quot;originalName&quot;)),</span>
+<span class="nc" id="L113">                    &quot;%&quot; + q.toLowerCase(Locale.ROOT) + &quot;%&quot;));</span>
+        }
+
+<span class="fc" id="L116">        return fileRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, &quot;createdAt&quot;)));</span>
+    }
+
+    /**
+     * Returns the file only when it belongs to the caller. A file owned by
+     * somebody else is reported as &quot;not found&quot; rather than &quot;forbidden&quot; so the API
+     * does not leak the existence of other users' files. Expired files are still
+     * returned: they stay visible in the history (US05) until the cleanup job
+     * removes them.
+     */
+    @Transactional(readOnly = true)
+    public File getOwnedFile(Long fileId, Long ownerId) {
+<span class="pc" id="L128">        return fileRepository.findByFileIdAndOwnerId(fileId, ownerId)</span>
+<span class="pc" id="L129">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;File not found&quot;));</span>
+    }
+
+
+    /**
+     * Ownership check only, without the expiration check: used by the operations
+     * that stay legitimate on an expired file, such as deleting it from the
+     * history.
+     */
+    @Transactional(readOnly = true)
+    public File requireOwnedFileEvenIfExpired(Long fileId, Long ownerId) {
+<span class="fc" id="L140">        File file = fileRepository.findById(fileId)</span>
+<span class="pc" id="L141">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;File not found&quot;));</span>
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (!java.util.Objects.equals(ownerId, file.getOwnerId())) {</span>
+<span class="nc" id="L143">            throw new ForbiddenException(&quot;You do not own this file&quot;);</span>
+        }
+<span class="fc" id="L145">        return file;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public File requireOwnedFile(Long fileId, Long ownerId) {
+<span class="fc" id="L150">        File file = requireOwnedFileEvenIfExpired(fileId, ownerId);</span>
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">        if (file.isExpired(OffsetDateTime.now())) {</span>
+<span class="nc" id="L152">            throw new ResourceNotFoundException(&quot;File not found&quot;);</span>
+        }
+<span class="fc" id="L154">        return file;</span>
+    }
+
+    @Transactional
+    public DownloadTokenService.IssuedToken createDownloadToken(Long fileId, Long ownerId) {
+<span class="nc" id="L159">        return downloadTokenService.issueFor(requireOwnedFile(fileId, ownerId));</span>
+    }
+
+    @Transactional
+    public File updateFile(Long fileId, Long ownerId, String originalName,
+            Integer expiresInDays, String password, List&lt;String&gt; tags) {
+<span class="fc" id="L165">        File file = requireOwnedFile(fileId, ownerId);</span>
+
+<span class="pc bpc" id="L167" title="2 of 4 branches missed.">        if (originalName != null &amp;&amp; !originalName.isBlank()) {</span>
+<span class="fc" id="L168">            file.setOriginalName(originalName.trim());</span>
+        }
+<span class="fc bfc" id="L170" title="All 2 branches covered.">        if (expiresInDays != null) {</span>
+<span class="fc" id="L171">            validateExpiration(expiresInDays);</span>
+<span class="fc" id="L172">            file.setExpiresAt(OffsetDateTime.now().plusDays(expiresInDays));</span>
+        }
+<span class="fc bfc" id="L174" title="All 2 branches covered.">        if (password != null) {</span>
+            // an explicit blank password removes the protection
+<span class="pc bpc" id="L176" title="1 of 2 branches missed.">            if (password.isBlank()) {</span>
+<span class="nc" id="L177">                file.setPasswordHash(null);</span>
+            } else {
+<span class="fc" id="L179">                validatePassword(password);</span>
+<span class="fc" id="L180">                file.setPasswordHash(passwordEncoder.encode(password));</span>
+            }
+        }
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        if (tags != null) {</span>
+<span class="fc" id="L184">            file.setTags(fileTagService.resolveOrCreate(ownerId, tags));</span>
+        }
+<span class="fc" id="L186">        return fileRepository.save(file);</span>
+    }
+
+    @Transactional
+    public File replaceTags(Long fileId, Long ownerId, List&lt;String&gt; tags) {
+<span class="nc" id="L191">        File file = requireOwnedFile(fileId, ownerId);</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">        file.setTags(fileTagService.resolveOrCreate(ownerId, tags == null ? List.of() : tags));</span>
+<span class="nc" id="L193">        return fileRepository.save(file);</span>
+    }
+
+    @Transactional
+    public void deleteFile(Long fileId, Long ownerId) {
+<span class="fc" id="L198">        purge(requireOwnedFileEvenIfExpired(fileId, ownerId));</span>
+<span class="fc" id="L199">    }</span>
+
+    /**
+     * Removes the metadata, the FILE_TAG associations, the download token and the
+     * stored object. The bucket deletion runs inside the transaction so that a
+     * storage failure rolls the whole thing back and lets the caller retry.
+     */
+    @Transactional
+    public void purge(File file) {
+<span class="fc" id="L208">        downloadTokenService.deleteFor(file.getFileId());</span>
+<span class="fc" id="L209">        file.getTags().clear();</span>
+<span class="fc" id="L210">        fileRepository.delete(file);</span>
+<span class="fc" id="L211">        fileRepository.flush();</span>
+<span class="fc" id="L212">        storageService.delete(file.getStorageKey());</span>
+<span class="fc" id="L213">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;File&gt; findExpired(OffsetDateTime now, int batchSize) {
+<span class="nc" id="L217">        return fileRepository.findAllByExpiresAtBefore(now, PageRequest.of(0, batchSize));</span>
+    }
+
+    private void validateUpload(MultipartFile file, String originalName, int expiresInDays, String password) {
+<span class="pc bpc" id="L221" title="1 of 4 branches missed.">        if (file == null || file.isEmpty()) {</span>
+<span class="fc" id="L222">            throw new BadRequestException(&quot;The uploaded file must not be empty&quot;);</span>
+        }
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        if (file.getSize() &gt; MAX_SIZE_BYTES) {</span>
+<span class="fc" id="L225">            throw new PayloadTooLargeException(&quot;Maximum file size is 1 GB&quot;);</span>
+        }
+<span class="fc" id="L227">        validateExpiration(expiresInDays);</span>
+<span class="fc bfc" id="L228" title="All 2 branches covered.">        if (hasPassword(password)) {</span>
+<span class="fc" id="L229">            validatePassword(password);</span>
+        }
+<span class="fc bfc" id="L231" title="All 2 branches covered.">        if (isForbiddenExtension(originalName)) {</span>
+<span class="fc" id="L232">            throw new BadRequestException(&quot;This file type is not allowed&quot;);</span>
+        }
+<span class="fc" id="L234">    }</span>
+
+    private void validateExpiration(int expiresInDays) {
+<span class="pc bpc" id="L237" title="1 of 4 branches missed.">        if (expiresInDays &lt; 1 || expiresInDays &gt; MAX_EXPIRATION_DAYS) {</span>
+<span class="fc" id="L238">            throw new BadRequestException(&quot;expiresInDays must be between 1 and &quot; + MAX_EXPIRATION_DAYS);</span>
+        }
+<span class="fc" id="L240">    }</span>
+
+    private void validatePassword(String password) {
+<span class="fc bfc" id="L243" title="All 2 branches covered.">        if (password.length() &lt; MIN_PASSWORD_LENGTH) {</span>
+<span class="fc" id="L244">            throw new BadRequestException(</span>
+                    &quot;password must be at least &quot; + MIN_PASSWORD_LENGTH + &quot; characters long&quot;);
+        }
+<span class="fc" id="L247">    }</span>
+
+    private boolean hasPassword(String password) {
+<span class="pc bpc" id="L250" title="1 of 4 branches missed.">        return password != null &amp;&amp; !password.isBlank();</span>
+    }
+
+    private boolean isForbiddenExtension(String filename) {
+<span class="fc" id="L254">        String lower = filename.toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L255">        return forbiddenExtensions.stream().anyMatch(lower::endsWith);</span>
+    }
+
+    /**
+     * Falls back to the name carried by the multipart part, and keeps only the
+     * last path segment because some clients send a full path.
+     */
+    private String resolveOriginalName(String requestedName, MultipartFile file) {
+<span class="pc bpc" id="L263" title="1 of 4 branches missed.">        String candidate = requestedName != null &amp;&amp; !requestedName.isBlank()</span>
+<span class="fc" id="L264">                ? requestedName</span>
+<span class="pc bpc" id="L265" title="1 of 2 branches missed.">                : (file == null ? null : file.getOriginalFilename());</span>
+<span class="pc bpc" id="L266" title="2 of 4 branches missed.">        if (candidate == null || candidate.isBlank()) {</span>
+<span class="nc" id="L267">            return &quot;file&quot;;</span>
+        }
+<span class="fc" id="L269">        String baseName = Paths.get(candidate.replace('\\', '/')).getFileName().toString().trim();</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">        return baseName.isEmpty() ? &quot;file&quot; : baseName;</span>
+    }
+
+    private String resolveMimeType(String requestedMimeType, MultipartFile file) {
+<span class="pc bpc" id="L274" title="3 of 4 branches missed.">        if (requestedMimeType != null &amp;&amp; !requestedMimeType.isBlank()) {</span>
+<span class="nc" id="L275">            return requestedMimeType;</span>
+        }
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">        String contentType = file == null ? null : file.getContentType();</span>
+<span class="pc bpc" id="L278" title="2 of 4 branches missed.">        return contentType != null &amp;&amp; !contentType.isBlank() ? contentType : DEFAULT_MIME_TYPE;</span>
+    }
+
+    private String sanitize(String name) {
+<span class="fc" id="L282">        return name.replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;_&quot;);</span>
+    }
+
+    private static Specification&lt;File&gt; ownedBy(Long ownerId) {
+<span class="fc" id="L286">        return (root, query, cb) -&gt; cb.equal(root.get(&quot;ownerId&quot;), ownerId);</span>
+    }
+
+    private static List&lt;String&gt; normalizeExtensions(String rawExtensions) {
+<span class="fc" id="L290">        return Arrays.stream(rawExtensions.split(&quot;,&quot;))</span>
+<span class="fc" id="L291">                .map(extension -&gt; extension.trim().toLowerCase(Locale.ROOT))</span>
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">                .filter(extension -&gt; !extension.isEmpty())</span>
+<span class="fc bfc" id="L293" title="All 2 branches covered.">                .map(extension -&gt; extension.startsWith(&quot;.&quot;) ? extension : &quot;.&quot; + extension)</span>
+<span class="fc" id="L294">                .toList();</span>
+    }
+
+<span class="fc" id="L297">    public record UploadCommand(MultipartFile file, String originalName, String mimeType,</span>
+            Integer expiresInDays, String password, List&lt;String&gt; tags, Long ownerId) {
+    }
+
+<span class="fc" id="L301">    public record UploadResult(File file, DownloadTokenService.IssuedToken downloadToken) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

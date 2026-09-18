@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PresignedUrlResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.datashare.model</a> &gt; <span class="el_source">PresignedUrlResponse.java</span></div><h1>PresignedUrlResponse.java</h1><pre class="source lang-java linenums">package com.datashare.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * PresignedUrlResponse
+ */
+
+@Generated(value = &quot;org.openapitools.codegen.languages.SpringCodegen&quot;, date = &quot;2026-09-18T14:19:44.601841100+02:00[Europe/Paris]&quot;, comments = &quot;Generator version: 7.4.0&quot;)
+public class PresignedUrlResponse {
+
+  private URI url;
+
+  /**
+   * Gets or Sets method
+   */
+<span class="nc" id="L33">  public enum MethodEnum {</span>
+<span class="nc" id="L34">    PUT(&quot;PUT&quot;),</span>
+    
+<span class="nc" id="L36">    GET(&quot;GET&quot;);</span>
+
+    private String value;
+
+<span class="nc" id="L40">    MethodEnum(String value) {</span>
+<span class="nc" id="L41">      this.value = value;</span>
+<span class="nc" id="L42">    }</span>
+
+    @JsonValue
+    public String getValue() {
+<span class="nc" id="L46">      return value;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L51">      return String.valueOf(value);</span>
+    }
+
+    @JsonCreator
+    public static MethodEnum fromValue(String value) {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">      for (MethodEnum b : MethodEnum.values()) {</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        if (b.value.equals(value)) {</span>
+<span class="nc" id="L58">          return b;</span>
+        }
+      }
+<span class="nc" id="L61">      throw new IllegalArgumentException(&quot;Unexpected value '&quot; + value + &quot;'&quot;);</span>
+    }
+  }
+
+  private MethodEnum method;
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime expiresAt;
+
+  public PresignedUrlResponse() {
+<span class="nc" id="L71">    super();</span>
+<span class="nc" id="L72">  }</span>
+
+  /**
+   * Constructor with only required parameters
+   */
+<span class="nc" id="L77">  public PresignedUrlResponse(URI url, MethodEnum method, OffsetDateTime expiresAt) {</span>
+<span class="nc" id="L78">    this.url = url;</span>
+<span class="nc" id="L79">    this.method = method;</span>
+<span class="nc" id="L80">    this.expiresAt = expiresAt;</span>
+<span class="nc" id="L81">  }</span>
+
+  public PresignedUrlResponse url(URI url) {
+<span class="nc" id="L84">    this.url = url;</span>
+<span class="nc" id="L85">    return this;</span>
+  }
+
+  /**
+   * Get url
+   * @return url
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;url&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;url&quot;)
+  public URI getUrl() {
+<span class="nc" id="L96">    return url;</span>
+  }
+
+  public void setUrl(URI url) {
+<span class="nc" id="L100">    this.url = url;</span>
+<span class="nc" id="L101">  }</span>
+
+  public PresignedUrlResponse method(MethodEnum method) {
+<span class="nc" id="L104">    this.method = method;</span>
+<span class="nc" id="L105">    return this;</span>
+  }
+
+  /**
+   * Get method
+   * @return method
+  */
+  @NotNull 
+  @Schema(name = &quot;method&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;method&quot;)
+  public MethodEnum getMethod() {
+<span class="nc" id="L116">    return method;</span>
+  }
+
+  public void setMethod(MethodEnum method) {
+<span class="nc" id="L120">    this.method = method;</span>
+<span class="nc" id="L121">  }</span>
+
+  public PresignedUrlResponse expiresAt(OffsetDateTime expiresAt) {
+<span class="nc" id="L124">    this.expiresAt = expiresAt;</span>
+<span class="nc" id="L125">    return this;</span>
+  }
+
+  /**
+   * Get expiresAt
+   * @return expiresAt
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;expiresAt&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;expiresAt&quot;)
+  public OffsetDateTime getExpiresAt() {
+<span class="nc" id="L136">    return expiresAt;</span>
+  }
+
+  public void setExpiresAt(OffsetDateTime expiresAt) {
+<span class="nc" id="L140">    this.expiresAt = expiresAt;</span>
+<span class="nc" id="L141">  }</span>
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L145" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L146">      return true;</span>
+    }
+<span class="nc bnc" id="L148" title="All 4 branches missed.">    if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L149">      return false;</span>
+    }
+<span class="nc" id="L151">    PresignedUrlResponse presignedUrlResponse = (PresignedUrlResponse) o;</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">    return Objects.equals(this.url, presignedUrlResponse.url) &amp;&amp;</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        Objects.equals(this.method, presignedUrlResponse.method) &amp;&amp;</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        Objects.equals(this.expiresAt, presignedUrlResponse.expiresAt);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L159">    return Objects.hash(url, method, expiresAt);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L164">    StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L165">    sb.append(&quot;class PresignedUrlResponse {\n&quot;);</span>
+<span class="nc" id="L166">    sb.append(&quot;    url: &quot;).append(toIndentedString(url)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L167">    sb.append(&quot;    method: &quot;).append(toIndentedString(method)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L168">    sb.append(&quot;    expiresAt: &quot;).append(toIndentedString(expiresAt)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L169">    sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L170">    return sb.toString();</span>
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+<span class="nc bnc" id="L178" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L179">      return &quot;null&quot;;</span>
+    }
+<span class="nc" id="L181">    return o.toString().replace(&quot;\n&quot;, &quot;\n    &quot;);</span>
+  }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileCleanupService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.service</a> &gt; <span class="el_source">FileCleanupService.java</span></div><h1>FileCleanupService.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.service;
+
+import com.openclassroom.datashare.entity.File;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+
+/**
+ * Enforces the &quot;the file and its metadata are automatically deleted at
+ * expiration&quot; rule of US01.
+ * &lt;p&gt;
+ * Each file is purged in its own transaction so that a single storage failure
+ * does not prevent the other expired files from being removed; the failing one
+ * is simply retried on the next run.
+ */
+@Service
+@RequiredArgsConstructor
+public class FileCleanupService {
+
+<span class="fc" id="L26">    private static final Logger log = LoggerFactory.getLogger(FileCleanupService.class);</span>
+
+    private final FileService fileService;
+
+    @Value(&quot;${app.cleanup.batch-size:200}&quot;)
+    private int batchSize;
+
+    @Scheduled(cron = &quot;${app.cleanup.cron:0 */1 * * * *}&quot;)
+    public void purgeExpiredFiles() {
+<span class="fc" id="L35">        List&lt;File&gt; expired = fileService.findExpired(OffsetDateTime.now(), batchSize);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (expired.isEmpty()) {</span>
+<span class="fc" id="L37">            return;</span>
+        }
+
+<span class="fc" id="L40">        int purged = 0;</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        for (File file : expired) {</span>
+            try {
+<span class="fc" id="L43">                fileService.purge(file);</span>
+<span class="fc" id="L44">                purged++;</span>
+<span class="fc" id="L45">            } catch (RuntimeException e) {</span>
+<span class="fc" id="L46">                log.error(&quot;Unable to purge expired file {} (storage key {}), will retry on the next run&quot;,</span>
+<span class="fc" id="L47">                        file.getFileId(), file.getStorageKey(), e);</span>
+<span class="fc" id="L48">            }</span>
+<span class="fc" id="L49">        }</span>
+<span class="fc" id="L50">        log.info(&quot;Purged {}/{} expired files&quot;, purged, expired.size());</span>
+<span class="fc" id="L51">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

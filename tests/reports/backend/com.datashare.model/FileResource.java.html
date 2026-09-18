@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.datashare.model</a> &gt; <span class="el_source">FileResource.java</span></div><h1>FileResource.java</h1><pre class="source lang-java linenums">package com.datashare.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * File entity corresponding to FILE in the conceptual data model. 
+ */
+
+@Schema(name = &quot;FileResource&quot;, description = &quot;File entity corresponding to FILE in the conceptual data model. &quot;)
+@Generated(value = &quot;org.openapitools.codegen.languages.SpringCodegen&quot;, date = &quot;2026-09-18T14:19:44.601841100+02:00[Europe/Paris]&quot;, comments = &quot;Generator version: 7.4.0&quot;)
+public class FileResource {
+
+  private Long fileId;
+
+  private Long ownerId;
+
+  private String originalName;
+
+  private Long sizeBytes;
+
+  private String mimeType;
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime createdAt;
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime expiresAt;
+
+  private Boolean hasPassword;
+
+  /**
+   * State of the download link. EXPIRED means expiresAt is in the past: the link no longer works and the file is awaiting automatic purge. 
+   */
+<span class="fc" id="L53">  public enum StatusEnum {</span>
+<span class="fc" id="L54">    VALID(&quot;VALID&quot;),</span>
+    
+<span class="fc" id="L56">    EXPIRED(&quot;EXPIRED&quot;);</span>
+
+    private String value;
+
+<span class="fc" id="L60">    StatusEnum(String value) {</span>
+<span class="fc" id="L61">      this.value = value;</span>
+<span class="fc" id="L62">    }</span>
+
+    @JsonValue
+    public String getValue() {
+<span class="fc" id="L66">      return value;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L71">      return String.valueOf(value);</span>
+    }
+
+    @JsonCreator
+    public static StatusEnum fromValue(String value) {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">      for (StatusEnum b : StatusEnum.values()) {</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (b.value.equals(value)) {</span>
+<span class="nc" id="L78">          return b;</span>
+        }
+      }
+<span class="nc" id="L81">      throw new IllegalArgumentException(&quot;Unexpected value '&quot; + value + &quot;'&quot;);</span>
+    }
+  }
+
+  private StatusEnum status;
+
+  @Valid
+  private List&lt;@Size(max = 30)String&gt; tags;
+
+  private String downloadToken;
+
+  private URI downloadUrl;
+
+  public FileResource() {
+<span class="fc" id="L95">    super();</span>
+<span class="fc" id="L96">  }</span>
+
+  /**
+   * Constructor with only required parameters
+   */
+<span class="nc" id="L101">  public FileResource(Long fileId, String originalName, Long sizeBytes, String mimeType, OffsetDateTime createdAt, OffsetDateTime expiresAt, Boolean hasPassword, StatusEnum status) {</span>
+<span class="nc" id="L102">    this.fileId = fileId;</span>
+<span class="nc" id="L103">    this.originalName = originalName;</span>
+<span class="nc" id="L104">    this.sizeBytes = sizeBytes;</span>
+<span class="nc" id="L105">    this.mimeType = mimeType;</span>
+<span class="nc" id="L106">    this.createdAt = createdAt;</span>
+<span class="nc" id="L107">    this.expiresAt = expiresAt;</span>
+<span class="nc" id="L108">    this.hasPassword = hasPassword;</span>
+<span class="nc" id="L109">    this.status = status;</span>
+<span class="nc" id="L110">  }</span>
+
+  public FileResource fileId(Long fileId) {
+<span class="fc" id="L113">    this.fileId = fileId;</span>
+<span class="fc" id="L114">    return this;</span>
+  }
+
+  /**
+   * Primary key FILE.file_id.
+   * minimum: 1
+   * @return fileId
+  */
+  @NotNull @Min(1L) 
+  @Schema(name = &quot;fileId&quot;, description = &quot;Primary key FILE.file_id.&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;fileId&quot;)
+  public Long getFileId() {
+<span class="fc" id="L126">    return fileId;</span>
+  }
+
+  public void setFileId(Long fileId) {
+<span class="nc" id="L130">    this.fileId = fileId;</span>
+<span class="nc" id="L131">  }</span>
+
+  public FileResource ownerId(Long ownerId) {
+<span class="fc" id="L134">    this.ownerId = ownerId;</span>
+<span class="fc" id="L135">    return this;</span>
+  }
+
+  /**
+   * Foreign key to USER.user_id. NULL means the file was uploaded anonymously. 
+   * minimum: 1
+   * @return ownerId
+  */
+  @Min(1L) 
+  @Schema(name = &quot;ownerId&quot;, description = &quot;Foreign key to USER.user_id. NULL means the file was uploaded anonymously. &quot;, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty(&quot;ownerId&quot;)
+  public Long getOwnerId() {
+<span class="fc" id="L147">    return ownerId;</span>
+  }
+
+  public void setOwnerId(Long ownerId) {
+<span class="nc" id="L151">    this.ownerId = ownerId;</span>
+<span class="nc" id="L152">  }</span>
+
+  public FileResource originalName(String originalName) {
+<span class="fc" id="L155">    this.originalName = originalName;</span>
+<span class="fc" id="L156">    return this;</span>
+  }
+
+  /**
+   * Original filename.
+   * @return originalName
+  */
+  @NotNull 
+  @Schema(name = &quot;originalName&quot;, description = &quot;Original filename.&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;originalName&quot;)
+  public String getOriginalName() {
+<span class="fc" id="L167">    return originalName;</span>
+  }
+
+  public void setOriginalName(String originalName) {
+<span class="nc" id="L171">    this.originalName = originalName;</span>
+<span class="nc" id="L172">  }</span>
+
+  public FileResource sizeBytes(Long sizeBytes) {
+<span class="fc" id="L175">    this.sizeBytes = sizeBytes;</span>
+<span class="fc" id="L176">    return this;</span>
+  }
+
+  /**
+   * File size in bytes.
+   * minimum: 0
+   * @return sizeBytes
+  */
+  @NotNull @Min(0L) 
+  @Schema(name = &quot;sizeBytes&quot;, description = &quot;File size in bytes.&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;sizeBytes&quot;)
+  public Long getSizeBytes() {
+<span class="fc" id="L188">    return sizeBytes;</span>
+  }
+
+  public void setSizeBytes(Long sizeBytes) {
+<span class="nc" id="L192">    this.sizeBytes = sizeBytes;</span>
+<span class="nc" id="L193">  }</span>
+
+  public FileResource mimeType(String mimeType) {
+<span class="fc" id="L196">    this.mimeType = mimeType;</span>
+<span class="fc" id="L197">    return this;</span>
+  }
+
+  /**
+   * MIME type of the file.
+   * @return mimeType
+  */
+  @NotNull 
+  @Schema(name = &quot;mimeType&quot;, description = &quot;MIME type of the file.&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;mimeType&quot;)
+  public String getMimeType() {
+<span class="fc" id="L208">    return mimeType;</span>
+  }
+
+  public void setMimeType(String mimeType) {
+<span class="nc" id="L212">    this.mimeType = mimeType;</span>
+<span class="nc" id="L213">  }</span>
+
+  public FileResource createdAt(OffsetDateTime createdAt) {
+<span class="fc" id="L216">    this.createdAt = createdAt;</span>
+<span class="fc" id="L217">    return this;</span>
+  }
+
+  /**
+   * File creation timestamp.
+   * @return createdAt
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;createdAt&quot;, description = &quot;File creation timestamp.&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;createdAt&quot;)
+  public OffsetDateTime getCreatedAt() {
+<span class="fc" id="L228">    return createdAt;</span>
+  }
+
+  public void setCreatedAt(OffsetDateTime createdAt) {
+<span class="nc" id="L232">    this.createdAt = createdAt;</span>
+<span class="nc" id="L233">  }</span>
+
+  public FileResource expiresAt(OffsetDateTime expiresAt) {
+<span class="fc" id="L236">    this.expiresAt = expiresAt;</span>
+<span class="fc" id="L237">    return this;</span>
+  }
+
+  /**
+   * Mandatory expiration timestamp. The file is considered expired after this timestamp. 
+   * @return expiresAt
+  */
+  @NotNull @Valid 
+  @Schema(name = &quot;expiresAt&quot;, description = &quot;Mandatory expiration timestamp. The file is considered expired after this timestamp. &quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;expiresAt&quot;)
+  public OffsetDateTime getExpiresAt() {
+<span class="fc" id="L248">    return expiresAt;</span>
+  }
+
+  public void setExpiresAt(OffsetDateTime expiresAt) {
+<span class="nc" id="L252">    this.expiresAt = expiresAt;</span>
+<span class="nc" id="L253">  }</span>
+
+  public FileResource hasPassword(Boolean hasPassword) {
+<span class="fc" id="L256">    this.hasPassword = hasPassword;</span>
+<span class="fc" id="L257">    return this;</span>
+  }
+
+  /**
+   * True when password_hash is present in the database. The actual password hash is never exposed. 
+   * @return hasPassword
+  */
+  
+  @Schema(name = &quot;hasPassword&quot;, accessMode = Schema.AccessMode.READ_ONLY, description = &quot;True when password_hash is present in the database. The actual password hash is never exposed. &quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;hasPassword&quot;)
+  public Boolean getHasPassword() {
+<span class="fc" id="L268">    return hasPassword;</span>
+  }
+
+  public void setHasPassword(Boolean hasPassword) {
+<span class="nc" id="L272">    this.hasPassword = hasPassword;</span>
+<span class="nc" id="L273">  }</span>
+
+  public FileResource status(StatusEnum status) {
+<span class="fc" id="L276">    this.status = status;</span>
+<span class="fc" id="L277">    return this;</span>
+  }
+
+  /**
+   * State of the download link. EXPIRED means expiresAt is in the past: the link no longer works and the file is awaiting automatic purge. 
+   * @return status
+  */
+  
+  @Schema(name = &quot;status&quot;, accessMode = Schema.AccessMode.READ_ONLY, description = &quot;State of the download link. EXPIRED means expiresAt is in the past: the link no longer works and the file is awaiting automatic purge. &quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty(&quot;status&quot;)
+  public StatusEnum getStatus() {
+<span class="fc" id="L288">    return status;</span>
+  }
+
+  public void setStatus(StatusEnum status) {
+<span class="nc" id="L292">    this.status = status;</span>
+<span class="nc" id="L293">  }</span>
+
+  public FileResource tags(List&lt;@Size(max = 30)String&gt; tags) {
+<span class="fc" id="L296">    this.tags = tags;</span>
+<span class="fc" id="L297">    return this;</span>
+  }
+
+  public FileResource addTagsItem(String tagsItem) {
+<span class="nc bnc" id="L301" title="All 2 branches missed.">    if (this.tags == null) {</span>
+<span class="nc" id="L302">      this.tags = new ArrayList&lt;&gt;();</span>
+    }
+<span class="nc" id="L304">    this.tags.add(tagsItem);</span>
+<span class="nc" id="L305">    return this;</span>
+  }
+
+  /**
+   * Names of the tags associated with the file.
+   * @return tags
+  */
+  
+  @Schema(name = &quot;tags&quot;, description = &quot;Names of the tags associated with the file.&quot;, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty(&quot;tags&quot;)
+  public List&lt;@Size(max = 30)String&gt; getTags() {
+<span class="fc" id="L316">    return tags;</span>
+  }
+
+  public void setTags(List&lt;@Size(max = 30)String&gt; tags) {
+<span class="nc" id="L320">    this.tags = tags;</span>
+<span class="nc" id="L321">  }</span>
+
+  public FileResource downloadToken(String downloadToken) {
+<span class="fc" id="L324">    this.downloadToken = downloadToken;</span>
+<span class="fc" id="L325">    return this;</span>
+  }
+
+  /**
+   * Raw, unpredictable download token. Only ever returned once, right after upload (POST /files), because only its hash is persisted afterward. Always null on GET/PATCH responses. 
+   * @return downloadToken
+  */
+  
+  @Schema(name = &quot;downloadToken&quot;, accessMode = Schema.AccessMode.READ_ONLY, description = &quot;Raw, unpredictable download token. Only ever returned once, right after upload (POST /files), because only its hash is persisted afterward. Always null on GET/PATCH responses. &quot;, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty(&quot;downloadToken&quot;)
+  public String getDownloadToken() {
+<span class="fc" id="L336">    return downloadToken;</span>
+  }
+
+  public void setDownloadToken(String downloadToken) {
+<span class="nc" id="L340">    this.downloadToken = downloadToken;</span>
+<span class="nc" id="L341">  }</span>
+
+  public FileResource downloadUrl(URI downloadUrl) {
+<span class="fc" id="L344">    this.downloadUrl = downloadUrl;</span>
+<span class="fc" id="L345">    return this;</span>
+  }
+
+  /**
+   * Ready-to-share download link built from downloadToken. Same availability constraint as downloadToken. 
+   * @return downloadUrl
+  */
+  @Valid 
+  @Schema(name = &quot;downloadUrl&quot;, accessMode = Schema.AccessMode.READ_ONLY, description = &quot;Ready-to-share download link built from downloadToken. Same availability constraint as downloadToken. &quot;, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty(&quot;downloadUrl&quot;)
+  public URI getDownloadUrl() {
+<span class="fc" id="L356">    return downloadUrl;</span>
+  }
+
+  public void setDownloadUrl(URI downloadUrl) {
+<span class="nc" id="L360">    this.downloadUrl = downloadUrl;</span>
+<span class="nc" id="L361">  }</span>
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L365" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L366">      return true;</span>
+    }
+<span class="nc bnc" id="L368" title="All 4 branches missed.">    if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L369">      return false;</span>
+    }
+<span class="nc" id="L371">    FileResource fileResource = (FileResource) o;</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">    return Objects.equals(this.fileId, fileResource.fileId) &amp;&amp;</span>
+<span class="nc bnc" id="L373" title="All 2 branches missed.">        Objects.equals(this.ownerId, fileResource.ownerId) &amp;&amp;</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">        Objects.equals(this.originalName, fileResource.originalName) &amp;&amp;</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">        Objects.equals(this.sizeBytes, fileResource.sizeBytes) &amp;&amp;</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">        Objects.equals(this.mimeType, fileResource.mimeType) &amp;&amp;</span>
+<span class="nc bnc" id="L377" title="All 2 branches missed.">        Objects.equals(this.createdAt, fileResource.createdAt) &amp;&amp;</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">        Objects.equals(this.expiresAt, fileResource.expiresAt) &amp;&amp;</span>
+<span class="nc bnc" id="L379" title="All 2 branches missed.">        Objects.equals(this.hasPassword, fileResource.hasPassword) &amp;&amp;</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">        Objects.equals(this.status, fileResource.status) &amp;&amp;</span>
+<span class="nc bnc" id="L381" title="All 2 branches missed.">        Objects.equals(this.tags, fileResource.tags) &amp;&amp;</span>
+<span class="nc bnc" id="L382" title="All 2 branches missed.">        Objects.equals(this.downloadToken, fileResource.downloadToken) &amp;&amp;</span>
+<span class="nc bnc" id="L383" title="All 2 branches missed.">        Objects.equals(this.downloadUrl, fileResource.downloadUrl);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L388">    return Objects.hash(fileId, ownerId, originalName, sizeBytes, mimeType, createdAt, expiresAt, hasPassword, status, tags, downloadToken, downloadUrl);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L393">    StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L394">    sb.append(&quot;class FileResource {\n&quot;);</span>
+<span class="nc" id="L395">    sb.append(&quot;    fileId: &quot;).append(toIndentedString(fileId)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L396">    sb.append(&quot;    ownerId: &quot;).append(toIndentedString(ownerId)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L397">    sb.append(&quot;    originalName: &quot;).append(toIndentedString(originalName)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L398">    sb.append(&quot;    sizeBytes: &quot;).append(toIndentedString(sizeBytes)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L399">    sb.append(&quot;    mimeType: &quot;).append(toIndentedString(mimeType)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L400">    sb.append(&quot;    createdAt: &quot;).append(toIndentedString(createdAt)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L401">    sb.append(&quot;    expiresAt: &quot;).append(toIndentedString(expiresAt)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L402">    sb.append(&quot;    hasPassword: &quot;).append(toIndentedString(hasPassword)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L403">    sb.append(&quot;    status: &quot;).append(toIndentedString(status)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L404">    sb.append(&quot;    tags: &quot;).append(toIndentedString(tags)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L405">    sb.append(&quot;    downloadToken: &quot;).append(toIndentedString(downloadToken)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L406">    sb.append(&quot;    downloadUrl: &quot;).append(toIndentedString(downloadUrl)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L407">    sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L408">    return sb.toString();</span>
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+<span class="nc bnc" id="L416" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L417">      return &quot;null&quot;;</span>
+    }
+<span class="nc" id="L419">    return o.toString().replace(&quot;\n&quot;, &quot;\n    &quot;);</span>
+  }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

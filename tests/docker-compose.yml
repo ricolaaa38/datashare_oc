@@ -40,6 +40,12 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_PATH_STYLE_ACCESS: "true"
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://frontend-test:3000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q 'UP'"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
     depends_on:
       postgres-test:
         condition: service_healthy
@@ -47,11 +53,19 @@ services:
         condition: service_healthy
 
   frontend-test:
-    build: ../frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend-test:8080
+    build:
+      context: ../frontend
+      args:
+        # NEXT_PUBLIC_* values are inlined into the client bundle at build
+        # time, so this must be a build arg, not just an environment entry.
+        NEXT_PUBLIC_API_URL: http://backend-test:8080
     depends_on:
       - backend-test
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://'+process.env.HOSTNAME+':3000/', response => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 60
 
   tests:
     build:
@@ -69,22 +83,26 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_PATH_STYLE_ACCESS: "true"
+      COVERAGE_DIRECTORY: /workspace/reports/frontend
     depends_on:
       postgres-test:
         condition: service_healthy
       minio-test:
         condition: service_healthy
       backend-test:
-        condition: service_started
+        condition: service_healthy
       frontend-test:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./reports:/workspace/reports
       - ../backend:/backend
       - maven-cache:/root/.m2
     command: >
-      sh -c "cd /backend && sh ./mvnw test -B &&
-             cd /workspace && npm run test:e2e && npm run test:perf"
+          sh -c "cd /backend && sh ./mvnw verify -B &&
+            mkdir -p /workspace/reports/backend &&
+            cp -R target/site/jacoco/. /workspace/reports/backend/ &&
+            cd /frontend && npm run test:coverage &&
+            cd /workspace && npm run test:e2e && npm run test:perf"
 
 volumes:
   maven-cache:

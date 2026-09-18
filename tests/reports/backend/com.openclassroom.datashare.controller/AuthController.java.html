@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.openclassroom.datashare.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.openclassroom.datashare.controller;
+
+import com.datashare.api.AuthApi;
+import com.datashare.model.LoginRequest;
+import com.datashare.model.LoginResponse;
+import com.datashare.model.User;
+import com.openclassroom.datashare.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequiredArgsConstructor
+public class AuthController implements AuthApi {
+
+    private final UserService userService;
+
+    @Override
+    public ResponseEntity&lt;LoginResponse&gt; authLoginPost(@Valid @RequestBody LoginRequest loginRequest) {
+<span class="fc" id="L22">        UserService.LoginResult result = userService.loginUser(loginRequest.getLogin(), loginRequest.getPassword());</span>
+
+<span class="fc" id="L24">        User apiUser = new User()</span>
+<span class="fc" id="L25">                .userId(Math.toIntExact(result.user().getId()))</span>
+<span class="fc" id="L26">                .login(result.user().getLogin())</span>
+<span class="fc" id="L27">                .createdAt(result.user().getCreatedAt())</span>
+<span class="fc" id="L28">                .lastLogin(result.user().getLastLogin());</span>
+
+<span class="fc" id="L30">        LoginResponse response = new LoginResponse()</span>
+<span class="fc" id="L31">                .accessToken(result.token())</span>
+<span class="fc" id="L32">                .user(apiUser);</span>
+
+<span class="fc" id="L34">        return ResponseEntity.ok(response);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
