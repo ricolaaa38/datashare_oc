@@ -1,10 +1,9 @@
 package com.openclassroom.datashare;
 
+import com.openclassroom.datashare.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class DatashareApplicationTests {
+class DatashareApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {

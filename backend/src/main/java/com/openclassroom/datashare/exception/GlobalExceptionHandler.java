@@ -42,6 +42,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Error> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", ex.getMessage());
+    }
+
     @ExceptionHandler(FileExpiredException.class)
     public ResponseEntity<Error> handleExpired(FileExpiredException ex) {
         return build(HttpStatus.GONE, "GONE", ex.getMessage());

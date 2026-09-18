@@ -3,6 +3,7 @@ package com.openclassroom.datashare.service;
 import com.openclassroom.datashare.entity.User;
 import com.openclassroom.datashare.exception.BadRequestException;
 import com.openclassroom.datashare.exception.ConflictException;
+import com.openclassroom.datashare.exception.InvalidCredentialsException;
 import com.openclassroom.datashare.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-    /** Kept in sync with the {@code minLength} declared on UserCreateRequest in openapi.yaml. */
+    /**
+     * Kept in sync with the {@code minLength} declared on UserCreateRequest in
+     * openapi.yaml.
+     */
     public static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
@@ -40,10 +44,10 @@ public class UserService {
 
     public LoginResult loginUser(String login, String password) {
         User user = userRepository.findByLogin(login)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new InvalidCredentialsException("Invalid credentials");
         }
 
         user.setLastLogin(java.time.OffsetDateTime.now());
@@ -59,5 +63,6 @@ public class UserService {
         return new LoginResult(token, user);
     }
 
-    public record LoginResult(String token, User user) {}
+    public record LoginResult(String token, User user) {
+    }
 }

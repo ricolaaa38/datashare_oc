@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -171,6 +172,41 @@ class FileServiceTest {
         assertThat(result.file().getOwnerId()).isEqualTo(OWNER_ID);
         assertThat(result.downloadToken().token()).isEqualTo("raw-token");
         assertThat(result.downloadToken().downloadUrl()).hasToString("http://localhost:8080/downloads/raw-token");
+    }
+
+    @Test
+    void updatingAFileChangesItsMetadataPasswordAndTags() {
+        File existingFile = new File();
+        existingFile.setFileId(1L);
+        existingFile.setOwnerId(OWNER_ID);
+        existingFile.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        FileTag work = new FileTag(OWNER_ID, "travail");
+        when(fileRepository.findById(1L)).thenReturn(Optional.of(existingFile));
+        when(fileTagService.resolveOrCreate(OWNER_ID, List.of("travail"))).thenReturn(Set.of(work));
+
+        File updatedFile = fileService.updateFile(1L, OWNER_ID, " rapport final.pdf ", 2, "newpass",
+                List.of("travail"));
+
+        assertThat(updatedFile.getOriginalName()).isEqualTo("rapport final.pdf");
+        assertThat(updatedFile.getPasswordHash()).isEqualTo("hashed");
+        assertThat(updatedFile.getTags()).containsExactly(work);
+        verify(fileRepository).save(existingFile);
+    }
+
+    @Test
+    void deletingAFileRemovesItsTokenMetadataAndStoredContent() {
+        File existingFile = new File();
+        existingFile.setFileId(1L);
+        existingFile.setOwnerId(OWNER_ID);
+        existingFile.setStorageKey("files/report.pdf");
+        when(fileRepository.findById(1L)).thenReturn(Optional.of(existingFile));
+
+        fileService.deleteFile(1L, OWNER_ID);
+
+        verify(downloadTokenService).deleteFor(1L);
+        verify(fileRepository).delete(existingFile);
+        verify(fileRepository).flush();
+        verify(storageService).delete("files/report.pdf");
     }
 
     private MultipartFile document() {

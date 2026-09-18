@@ -30,7 +30,7 @@ public class FileCleanupService {
     @Value("${app.cleanup.batch-size:200}")
     private int batchSize;
 
-    @Scheduled(cron = "${app.cleanup.cron:0 */15 * * * *}")
+    @Scheduled(cron = "${app.cleanup.cron:0 */1 * * * *}")
     public void purgeExpiredFiles() {
         List<File> expired = fileService.findExpired(OffsetDateTime.now(), batchSize);
         if (expired.isEmpty()) {
