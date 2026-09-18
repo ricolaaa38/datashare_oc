@@ -43,6 +43,34 @@ docker compose run --rm --no-deps tests npm run test:perf
 
 Le chemin upload mesure ensemble la réception multipart, la validation, l’écriture PostgreSQL, l’écriture MinIO et la création du token. Le chemin download mesure la résolution du hash, la lecture MinIO et le streaming HTTP. Une hausse de `upload_duration` indique généralement PostgreSQL/MinIO ou la taille du fichier ; une hausse de `download_duration` indique plutôt le stockage ou le réseau.
 
+## Budget de performance frontend
+
+Le budget porte sur la taille du bundle livré au navigateur et sur l’expérience perçue lors du chargement des pages `/`, `/login`, `/register`, `/files` et `/download/[token]`.
+
+| Métrique | Outil | Seuil | Verdict |
+| --- | --- | --- | --- |
+| Taille JS first load par route | `npm --prefix frontend run build` (colonne « First Load JS » du récapitulatif Next.js) | < 200 Ko par route | à mesurer sur le build de référence |
+| Largest Contentful Paint (LCP) | Lighthouse (Chrome DevTools ou `npx lighthouse`) | < 2,5 s | à mesurer |
+| Cumulative Layout Shift (CLS) | Lighthouse | < 0,1 | à mesurer |
+| Time to Interactive / Total Blocking Time | Lighthouse | TBT < 200 ms | à mesurer |
+
+Procédure de mesure :
+
+```powershell
+Set-Location frontend
+npm run build
+npx lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json --chrome-flags="--headless"
+```
+
+Le récapitulatif `npm run build` affiche la taille First Load JS de chaque route ; toute route dépassant le seuil doit être analysée avec `next build --profile` ou un import dynamique (`next/dynamic`) avant merge. Aucune valeur de LCP/CLS/TBT n’est indiquée dans ce document tant que Lighthouse n’a pas été exécuté sur l’environnement cible ; les résultats mesurés doivent être ajoutés ici avec la date et le commit correspondant, à la manière des résultats k6 ci-dessus.
+
+## Suivi des métriques clés
+
+Deux catégories de métriques sont suivies dans la durée :
+
+- **Temps de réponse backend** : p95 upload/metadata/download issus de `tests/perf/scenario.js` (section « Scénario » ci-dessus), à rejouer à chaque changement notable et à consigner avec la date, le build et le nombre de VU.
+- **Taille des fichiers échangés** : taille moyenne et p95 des fichiers déposés (`Content-Length` des requêtes `POST /files` et `POST /anonymous/files`), suivie via les logs structurés ECS du backend (champ HTTP request size) ou un tableau de bord agrégeant ces logs. Une hausse significative de la taille moyenne doit être corrélée avec `upload_duration` et la consommation de stockage MinIO.
+
 ## Logs structurés
 
 Le backend est configuré avec `logging.structured.format.console=ecs`. Les logs de la console sont donc JSON ECS et peuvent être ingérés par Application Insights, Elastic ou un collecteur Docker. Les champs à suivre sont `@timestamp`, `log.level`, `service.name`, `message`, `trace.id` quand disponible et les codes HTTP.

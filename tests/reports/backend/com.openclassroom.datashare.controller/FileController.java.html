@@ -32,7 +32,7 @@ public class FileController implements FilesApi {
     public ResponseEntity&lt;FileResource&gt; filesPost(MultipartFile file, String originalName, String mimeType,
             Integer expiresInDays, String password, String tags) {
 <span class="fc" id="L34">        FileService.UploadCommand command = new FileService.UploadCommand(</span>
-                file, originalName, mimeType, expiresInDays, password,
+<span class="fc" id="L35">                file, originalName, mimeType, expiresInDays, password,</span>
 <span class="fc" id="L36">                FileTagService.parseCommaSeparated(tags), currentUserProvider.requireCurrentUserId());</span>
 
 <span class="fc" id="L38">        FileService.UploadResult result = fileService.upload(command);</span>

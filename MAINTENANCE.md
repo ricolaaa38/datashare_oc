@@ -39,6 +39,31 @@ Ne jamais committer de secret. En production, injecter les paramètres DB, S3 et
 
 Le job backend exécute le nettoyage selon `CLEANUP_CRON` et traite au plus `CLEANUP_BATCH_SIZE` fichiers par lot. Surveiller ses logs et vérifier que les objets MinIO et les métadonnées PostgreSQL diminuent après expiration.
 
-## Mise à jour
+## Mise à jour des dépendances
 
-Mettre à jour les lockfiles avec `npm ci` en CI, vérifier les changements par `npm audit`, puis reconstruire les images. Pour Maven, conserver le wrapper `mvnw` et valider chaque mise à jour par `verify` et le compose de tests.
+### Fréquence
+
+| Type | Fréquence | Déclencheur |
+| --- | --- | --- |
+| Vulnérabilité de sécurité (CVE haute/critique) | Immédiate | alerte `npm audit` / Dependabot / scan `SECURITY.md` |
+| Correctifs (patch) | Mensuelle | revue planifiée |
+| Versions mineures | Mensuelle à trimestrielle | revue planifiée, groupées par lot |
+| Versions majeures (Spring Boot, Next.js, React) | Ponctuelle, planifiée à l’avance | changelog amont, fin de support d’une version |
+
+### Procédure
+
+1. Identifier les mises à jour disponibles :
+   - Frontend : `Set-Location frontend; npm outdated` et `npm audit`.
+   - Backend : `Set-Location backend; .\mvnw.cmd versions:display-dependency-updates`.
+2. Mettre à jour par petits lots (une dépendance majeure à la fois, les patches/mineures peuvent être groupés).
+3. Rejouer le cycle de validation complet (voir « Cycle de validation » ci-dessus) : `mvnw verify`, lint/tests/build frontend, stack Docker de tests.
+4. Mettre à jour les lockfiles (`package-lock.json` via `npm install`, puis `npm ci` en CI) et le `pom.xml`.
+5. Documenter le changement (version avant/après, raison) dans la pull request.
+
+### Risques par type de dépendance
+
+- **Patch/correctif de sécurité** : risque faible, à appliquer rapidement ; une CI verte (tests + build) suffit à valider.
+- **Mineure** : risque faible à modéré (nouvelles API, dépréciations) ; revue du changelog et CI verte requises.
+- **Majeure côté backend** (Spring Boot, Java) : risque élevé de changements cassants (auto-configuration, sécurité, JPA) ; exécuter `mvnw verify` complet et rejouer les tests d’intégration avant merge.
+- **Majeure côté frontend** (Next.js, React) : risque élevé sur le routage, les Server Components et le build ; exécuter `npm run build`, les tests Jest et impérativement la suite Playwright avant merge.
+- **Images Docker de base** (`postgres`, `minio/minio`, images `node`/`eclipse-temurin` du Dockerfile) : figer des tags de version explicites plutôt que `latest`, et scanner l’image avec Trivy avant mise en production (voir [SECURITY.md](SECURITY.md)).
