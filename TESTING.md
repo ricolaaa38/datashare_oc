@@ -28,10 +28,10 @@ Commandes ciblées :
 
 ```powershell
 Set-Location backend; .\mvnw.cmd verify -B
-Set-Location frontend; npm test -- --runInBand
+Set-Location frontend; npm ci; npm test -- --runInBand
 Set-Location frontend; npm run test:coverage
-Set-Location tests; npm run test:e2e
-Set-Location tests; npm run test:perf
+Set-Location tests; npx playwright install chromium; npm run test:e2e
+Set-Location tests; winget install --id GrafanaLabs.k6 --exact ; k6 version; npm run test:perf
 ```
 
 ## Couverture

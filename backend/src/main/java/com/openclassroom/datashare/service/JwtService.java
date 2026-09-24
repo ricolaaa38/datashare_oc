@@ -11,14 +11,15 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 /**
- * Service for handling JWT (JSON Web Token) operations such as token generation, validation, and extraction of user information.
+ * Service for handling JWT (JSON Web Token) operations such as token
+ * generation, validation, and extraction of user information.
  */
 @Service
 public class JwtService {
 
-    @Value("${JWT_SECRET_KEY}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
-    @Value("${JWT_EXPIRATION_MS}")
+    @Value("${app.jwt.expiration-ms}")
     private int jwtExpirationMs;
 
     /**
