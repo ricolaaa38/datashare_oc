@@ -21,6 +21,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import static com.openclassroom.datashare.controller.FileResourceMapper.toApiModel;
 
+/**
+ * Controller for handling file-related operations.
+ */
 @RestController
 @RequiredArgsConstructor
 public class FileController implements FilesApi {

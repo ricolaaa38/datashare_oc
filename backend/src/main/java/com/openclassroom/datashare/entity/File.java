@@ -9,6 +9,10 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Represents a file entity in the system.
+ * This entity is used to store metadata about files uploaded by users.
+ */
 @Entity
 @Table(name = "files")
 @Data

@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
+ * Controller for handling anonymous file uploads.
  * US07: same upload rules as US01, but the file is not attached to any user and
  * therefore never appears in a personal history.
  */

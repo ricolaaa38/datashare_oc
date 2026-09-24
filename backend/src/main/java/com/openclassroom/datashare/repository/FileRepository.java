@@ -10,6 +10,10 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository interface for managing File entities.
+ * Provides methods to perform CRUD operations and custom queries on files.
+ */
 @Repository
 public interface FileRepository extends JpaRepository<File, Long>, JpaSpecificationExecutor<File> {
 

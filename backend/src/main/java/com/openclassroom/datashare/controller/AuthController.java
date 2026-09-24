@@ -11,6 +11,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Controller for handling user authentication.
+ * allows users to log in and receive an access token for authenticated requests.
+ */
 @RestController
 @RequiredArgsConstructor
 public class AuthController implements AuthApi {

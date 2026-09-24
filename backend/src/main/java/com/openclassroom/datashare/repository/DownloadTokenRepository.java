@@ -6,6 +6,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Repository interface for managing DownloadToken entities.
+ * Provides methods to perform CRUD operations and custom queries on download tokens.
+ */
 @Repository
 public interface DownloadTokenRepository extends JpaRepository<DownloadToken, Long> {
     Optional<DownloadToken> findByTokenHash(String tokenHash);

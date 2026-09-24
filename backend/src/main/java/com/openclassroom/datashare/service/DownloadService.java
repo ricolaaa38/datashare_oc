@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 
 /**
- * Serves US02: anyone holding a valid link can see what is shared and download
- * it, providing the password when the file is protected.
+ * Service for handling file downloads, including token resolution, password validation,
+ * and file retrieval from storage.
  */
 @Service
 @RequiredArgsConstructor
@@ -26,10 +26,10 @@ public class DownloadService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * Metadata shown to the recipient before downloading. Deliberately requires
-     * no password: it only reveals what the sender chose to share, and the
-     * {@code hasPassword} flag is what lets the client decide whether to prompt
-     * for one.
+     * Describes a file associated with the given download token.
+     * @param rawToken The raw, cryptographically unpredictable download token. It is never stored directly in the database, only its hash is.
+     * @return The File entity associated with the token.
+     * @throws FileExpiredException if the file has expired.
      */
     @Transactional(readOnly = true)
     public File describeByToken(String rawToken) {
@@ -38,6 +38,14 @@ public class DownloadService {
         return file;
     }
 
+    /**
+     * Downloads a file associated with the given download token, validating the password if required.
+     * @param rawToken The raw, cryptographically unpredictable download token. It is never stored directly in the database, only its hash is.
+     * @param password The password for the file, if it is password-protected.
+     * @return A DownloadResult containing the InputStreamResource and File entity.
+     * @throws FileExpiredException if the file has expired.
+     * @throws InvalidTokenOrPasswordException if the password is invalid or missing for a protected file.
+     */
     @Transactional(readOnly = true)
     public DownloadResult downloadByToken(String rawToken, String password) {
 
@@ -45,8 +53,6 @@ public class DownloadService {
         requireNotExpired(file);
         requireValidPassword(file, password);
 
-        // the stream stays open until the response body has been written, so it is
-        // only closed here when building the result fails
         var content = storageService.load(file.getStorageKey());
         try {
             return new DownloadResult(new InputStreamResource(content), file);
@@ -56,14 +62,23 @@ public class DownloadService {
         }
     }
 
+    /**
+     * Checks if the file has expired and throws an exception if it has.
+     * @param file The File entity to check for expiration.
+     * @throws FileExpiredException if the file has expired.
+     */
     private void requireNotExpired(File file) {
         if (file.isExpired(OffsetDateTime.now())) {
-            // the scheduled cleanup deletes the content shortly after expiry; refuse
-            // the link immediately so an expired one is never served
             throw new FileExpiredException("This link has expired and the file is no longer available");
         }
     }
 
+    /**
+     * Checks if the provided password is valid for the given file and throws an exception if it is not.
+     * @param file The File entity to check the password for.
+     * @param password The password to validate.
+     * @throws InvalidTokenOrPasswordException if the password is invalid or missing for a protected file.
+     */
     private void requireValidPassword(File file, String password) {
         if (file.getPasswordHash() == null) {
             return;
@@ -76,14 +91,22 @@ public class DownloadService {
         }
     }
 
+    /**
+     * Closes the given Closeable quietly, ignoring any IOException that occurs.
+     * @param closeable The Closeable to close.
+     */
     private void closeQuietly(Closeable closeable) {
         try {
             closeable.close();
         } catch (IOException ignored) {
-            // nothing useful to do: the original failure is the one worth reporting
         }
     }
 
+    /**
+     * A record representing the result of a download operation, containing the InputStreamResource and the File entity.
+     * @param resource The InputStreamResource of the file content.
+     * @param file The File entity.
+     */
     public record DownloadResult(InputStreamResource resource, File file) {
     }
 }

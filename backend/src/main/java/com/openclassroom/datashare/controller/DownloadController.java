@@ -15,12 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Controller for handling file downloads.
+ * Provides endpoints to retrieve file metadata and download files using a unique token.
+ */
 @RestController
 @RequiredArgsConstructor
 public class DownloadController implements DownloadsApi {
 
     private final DownloadService downloadService;
 
+    /**
+     * Retrieves metadata for a file associated with the given download token.
+     * @param token The raw, cryptographically unpredictable download token. It is never stored directly in the database, only its hash is.
+     * @return A ResponseEntity containing the download metadata.
+     */
     @Override
     public ResponseEntity<DownloadMetadata> downloadsTokenMetadataGet(String token) {
         File file = downloadService.describeByToken(token);
@@ -34,12 +43,17 @@ public class DownloadController implements DownloadsApi {
         return ResponseEntity.ok(metadata);
     }
 
+    /**
+     * Downloads a file associated with the given download token.
+     * @param token The raw, cryptographically unpredictable download token. It is never stored directly in the database, only its hash is.
+     * @param xFilePassword The password for the file, if it is password-protected.
+     * @return A ResponseEntity containing the file as a Resource.
+     */
     @Override
     public ResponseEntity<Resource> downloadsTokenGet(String token, String xFilePassword) {
         DownloadService.DownloadResult result = downloadService.downloadByToken(token, xFilePassword);
         File file = result.file();
 
-        // the UTF-8 form keeps accented filenames readable instead of mangling them
         ContentDisposition disposition = ContentDisposition.attachment()
                 .filename(file.getOriginalName(), StandardCharsets.UTF_8)
                 .build();
@@ -52,8 +66,10 @@ public class DownloadController implements DownloadsApi {
     }
 
     /**
-     * A stored MIME type that cannot be parsed must not turn a valid download into
-     * a 500; the generic binary type is always an acceptable answer.
+     * Safely parses the given MIME type string into a MediaType object.
+     * If the MIME type is invalid, it defaults to application/octet-stream.
+     * @param mimeType The MIME type string to parse.
+     * @return A MediaType object representing the parsed MIME type or application/octet-stream if invalid.
      */
     private MediaType safeMediaType(String mimeType) {
         try {

@@ -6,6 +6,10 @@ import java.time.OffsetDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Represents a download token associated with a file.
+ * This entity is used to manage secure access to files for downloading.
+ */
 @Entity
 @Data
 @NoArgsConstructor

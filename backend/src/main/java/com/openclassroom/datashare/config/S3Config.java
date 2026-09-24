@@ -12,6 +12,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
+/**
+ * Configuration class for setting up the S3 client.
+ * This class defines a bean for the S3Client, which can be used to interact with Amazon S3 or compatible services.
+ */
 @Configuration
 public class S3Config {
 
@@ -29,7 +33,7 @@ public class S3Config {
 						.build());
 
 		if (!endpoint.isBlank()) {
-			// endpoint custom (MinIO) uniquement en dev, credentials AWS par défaut sinon
+			// Custom endpoint (MinIO) only in development, default AWS credentials otherwise
 			builder.endpointOverride(URI.create(endpoint))
 					.credentialsProvider(StaticCredentialsProvider.create(
 							AwsBasicCredentials.create(accessKey, secretKey)));

@@ -22,6 +22,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import java.util.List;
 
+/**
+ * Security configuration class for the application.
+ * This class sets up authentication, authorization, and CORS settings.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -35,16 +39,28 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
+    /**
+     * Bean for password encoding using BCrypt.
+     * This is used by Spring Security to encode and verify passwords.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Bean for authentication manager.
+     * This is used by Spring Security to handle authentication.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
+    /**
+     * Bean for DAO authentication provider.
+     * This is used by Spring Security to authenticate users with a username and password.
+     */
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(customUserDetailService);
@@ -52,6 +68,10 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Bean for security filter chain.
+     * This is used by Spring Security to configure HTTP security, including CORS, CSRF, session management, and request authorization.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -74,6 +94,10 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Bean for CORS configuration source.
+     * This is used by Spring Security to configure CORS settings for the application.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

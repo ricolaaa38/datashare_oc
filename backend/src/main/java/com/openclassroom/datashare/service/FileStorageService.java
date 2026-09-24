@@ -13,7 +13,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /**
- * Thin wrapper around the S3 client used to store and retrieve file content.
+ * Service for handling file storage operations in AWS S3.
+ * Provides methods to store, load, and delete files in a specified S3 bucket.
  */
 @Service
 public class FileStorageService {
@@ -26,6 +27,9 @@ public class FileStorageService {
         this.bucket = bucket;
     }
 
+    /**
+     * Ensures that the specified S3 bucket exists, creating it if necessary.
+     */
     @PostConstruct
     void ensureBucketExists() {
         try {
@@ -35,6 +39,13 @@ public class FileStorageService {
         }
     }
 
+    /**
+     * Stores a file in the S3 bucket with the specified key and content type.
+     *
+     * @param file        the file to store
+     * @param key         the key under which to store the file
+     * @param contentType the content type of the file
+     */
     public void store(MultipartFile file, String key, String contentType) {
         try {
             PutObjectRequest request = PutObjectRequest.builder()
@@ -49,10 +60,21 @@ public class FileStorageService {
         }
     }
 
+    /**
+     * Loads a file from the S3 bucket with the specified key.
+     *
+     * @param key the key of the file to load
+     * @return a ResponseInputStream containing the file's content
+     */
     public ResponseInputStream<GetObjectResponse> load(String key) {
         return s3Client.getObject(GetObjectRequest.builder().bucket(bucket).key(key).build());
     }
 
+    /**
+     * Deletes a file from the S3 bucket with the specified key.
+     *
+     * @param key the key of the file to delete
+     */
     public void delete(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
     }

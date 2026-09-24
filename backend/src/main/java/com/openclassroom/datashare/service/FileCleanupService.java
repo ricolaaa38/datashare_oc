@@ -12,12 +12,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * Enforces the "the file and its metadata are automatically deleted at
- * expiration" rule of US01.
- * <p>
- * Each file is purged in its own transaction so that a single storage failure
- * does not prevent the other expired files from being removed; the failing one
- * is simply retried on the next run.
+ * Service responsible for cleaning up expired files from the system.
+ * It periodically checks for files that have expired and attempts to purge them.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +26,10 @@ public class FileCleanupService {
     @Value("${app.cleanup.batch-size:200}")
     private int batchSize;
 
+    /**
+     * Scheduled method that purges expired files based on the configured cron expression.
+     * The default cron expression runs the cleanup every minute.
+     */
     @Scheduled(cron = "${app.cleanup.cron:0 */1 * * * *}")
     public void purgeExpiredFiles() {
         List<File> expired = fileService.findExpired(OffsetDateTime.now(), batchSize);

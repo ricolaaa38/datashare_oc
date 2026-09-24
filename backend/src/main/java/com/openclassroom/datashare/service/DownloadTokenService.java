@@ -19,9 +19,8 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /**
- * Single owner of the download-token lifecycle: generation, hashing, rotation
- * and resolution. The raw token is returned to the caller only once; only its
- * SHA-256 hash is persisted.
+ * Service class for managing download tokens.
+ * Provides methods to issue, resolve, and delete download tokens associated with files.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,11 +37,11 @@ public class DownloadTokenService {
     /**
      * Issues a token for the file, replacing (and therefore invalidating) any
      * previous one, since the data model allows a single token per file.
+     * @param file The File entity to issue a token for.
+     * @return The issued token information.
      */
     @Transactional
     public IssuedToken issueFor(File file) {
-        // flush so the DELETE reaches the database before the INSERT below,
-        // which Hibernate would otherwise order the other way around
         downloadTokenRepository.findByFile_FileId(file.getFileId()).ifPresent(existing -> {
             downloadTokenRepository.delete(existing);
             downloadTokenRepository.flush();
@@ -62,9 +61,10 @@ public class DownloadTokenService {
     }
 
     /**
-     * Resolves the token to its download link. An unknown token is reported as
-     * "not found" so the recipient gets an explicit error, distinct from a wrong
-     * password. This does not help enumeration: the token is 256 bits of entropy.
+     * Resolves a raw token to its corresponding DownloadToken entity.
+     * @param rawToken The raw, cryptographically unpredictable download token. It is never stored directly in the database, only its hash is.
+     * @return The resolved DownloadToken entity.
+     * @throws ResourceNotFoundException if the token is invalid or no longer exists.
      */
     @Transactional(readOnly = true)
     public DownloadToken resolve(String rawToken) {
@@ -76,12 +76,21 @@ public class DownloadTokenService {
                         "This download link is invalid or no longer exists"));
     }
 
+    /**
+     * Deletes the download token associated with the given file ID.
+     * @param fileId The ID of the file whose download token should be deleted.
+     */
     @Transactional
     public void deleteFor(Long fileId) {
         downloadTokenRepository.findByFile_FileId(fileId).ifPresent(downloadTokenRepository::delete);
         downloadTokenRepository.flush();
     }
 
+    /**
+     * Hashes the raw token using SHA-256.
+     * @param rawToken The raw token to hash.
+     * @return The hexadecimal representation of the hashed token.
+     */
     private String hash(String rawToken) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -91,6 +100,12 @@ public class DownloadTokenService {
         }
     }
 
+    /**
+     * Represents an issued download token with its associated information.
+     * @param token The raw download token.
+     * @param downloadUrl The URL to download the file using the token.
+     * @param createdAt The timestamp when the token was created.
+     */
     public record IssuedToken(String token, URI downloadUrl, OffsetDateTime createdAt) {
     }
 }

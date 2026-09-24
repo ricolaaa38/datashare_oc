@@ -11,6 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service class for managing user registration and authentication.
+ * Provides methods for registering new users and logging in existing users.
+ */
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -26,10 +30,17 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    /**
+     * Registers a new user in the system.
+     * Validates the password length and checks for existing users with the same login.
+     *
+     * @param user The user entity containing registration details.
+     * @return The registered user entity.
+     * @throws BadRequestException if the password is too short.
+     * @throws ConflictException if a user with the same login already exists.
+     */
     public User registerUser(User user) {
         String rawPassword = user.getPassword();
-        // the contract already enforces this at the web layer; repeating it here keeps
-        // the rule true for any other caller of the service
         if (rawPassword == null || rawPassword.length() < MIN_PASSWORD_LENGTH) {
             throw new BadRequestException(
                     "Password must be at least " + MIN_PASSWORD_LENGTH + " characters long");
@@ -42,6 +53,15 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * Authenticates a user with the provided login and password.
+     * If authentication is successful, generates a JWT token for the user.
+     *
+     * @param login    The login of the user.
+     * @param password The password of the user.
+     * @return A LoginResult containing the JWT token and user details.
+     * @throws InvalidCredentialsException if the login or password is incorrect.
+     */
     public LoginResult loginUser(String login, String password) {
         User user = userRepository.findByLogin(login)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
@@ -63,6 +83,10 @@ public class UserService {
         return new LoginResult(token, user);
     }
 
+    /**
+     * A record representing the result of a successful login operation.
+     * Contains the generated JWT token and the authenticated user details.
+     */
     public record LoginResult(String token, User user) {
     }
 }

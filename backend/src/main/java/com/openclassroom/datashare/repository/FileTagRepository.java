@@ -8,6 +8,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Repository interface for managing FileTag entities.
+ * Provides methods to perform CRUD operations and custom queries on file tags.
+ */
 @Repository
 public interface FileTagRepository extends JpaRepository<FileTag, Long> {
 

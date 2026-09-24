@@ -10,12 +10,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Controller for handling user registration.
+ * Provides an endpoint to register new users in the system.
+ */
 @RestController
 @RequiredArgsConstructor
 public class RegisterController implements UsersApi {
 
     private final UserService userService;
 
+    /**
+     * Registers a new user in the system.
+     * @param request The request containing the login and password for the new user.
+     * @return A ResponseEntity containing the created user information.
+     */
     @Override
     public ResponseEntity<User> usersPost(@Valid @RequestBody UserCreateRequest request) {
         com.openclassroom.datashare.entity.User entity = new com.openclassroom.datashare.entity.User();

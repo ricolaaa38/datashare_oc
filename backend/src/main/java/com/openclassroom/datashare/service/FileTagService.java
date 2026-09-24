@@ -17,8 +17,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Owns the lifecycle of user tags. Tags are per-user: two users may use the same
- * tag name without sharing the same row.
+ * Service for managing file tags.
+ * Provides methods to list, create, and resolve tags associated with users.
  */
 @Service
 @RequiredArgsConstructor
@@ -26,11 +26,27 @@ public class FileTagService {
 
     private final FileTagRepository fileTagRepository;
 
+    /**
+     * Lists the tags for a given user with pagination.
+     *
+     * @param userId the ID of the user
+     * @param page   the page number (0-based)
+     * @param size   the page size
+     * @return a list of FileTag entities
+     */
     @Transactional(readOnly = true)
     public List<FileTag> listTags(Long userId, int page, int size) {
         return fileTagRepository.findAllByUserIdOrderByNameAsc(userId, PageRequest.of(page, size)).getContent();
     }
 
+    /**
+     * Creates a new tag for the specified user.
+     *
+     * @param userId  the ID of the user
+     * @param rawName the raw name of the tag
+     * @return the created FileTag entity
+     * @throws ConflictException if a tag with the same name already exists
+     */
     @Transactional
     public FileTag createTag(Long userId, String rawName) {
         String name = normalize(rawName);
@@ -49,6 +65,10 @@ public class FileTagService {
      * Resolves the supplied tag names for the user, creating the missing ones.
      * Returns an empty set for anonymous uploads, which have no owner to attach
      * tags to.
+     *
+     * @param userId   the ID of the user
+     * @param rawNames the collection of raw tag names
+     * @return a set of resolved FileTag entities
      */
     @Transactional
     public Set<FileTag> resolveOrCreate(Long userId, Collection<String> rawNames) {
@@ -66,6 +86,9 @@ public class FileTagService {
     /**
      * Parses the comma-separated {@code tags} field accepted by the multipart
      * upload endpoint.
+     *
+     * @param rawTags the raw comma-separated tag names
+     * @return a list of parsed tag names
      */
     public static List<String> parseCommaSeparated(String rawTags) {
         if (rawTags == null || rawTags.isBlank()) {
@@ -74,6 +97,14 @@ public class FileTagService {
         return List.of(rawTags.split(","));
     }
 
+    /**
+     * Returns a set of distinct normalized tag names from the provided collection.
+     * Normalization includes trimming whitespace and ensuring uniqueness in a
+     * case-insensitive manner.
+     *
+     * @param rawNames the collection of raw tag names
+     * @return a set of distinct normalized tag names
+     */
     private Set<String> distinctNormalized(Collection<String> rawNames) {
         Set<String> seen = new LinkedHashSet<>();
         Set<String> lowercased = new LinkedHashSet<>();
@@ -89,6 +120,13 @@ public class FileTagService {
         return seen;
     }
 
+    /**
+     * Normalizes a raw tag name by trimming whitespace and validating its length.
+     *
+     * @param rawName the raw tag name
+     * @return the normalized tag name
+     * @throws BadRequestException if the tag name is blank or exceeds the maximum length
+     */
     private String normalize(String rawName) {
         String name = rawName == null ? "" : rawName.trim();
         if (name.isEmpty()) {

@@ -8,6 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
+/**
+ * Represents a user entity in the system.
+ * This entity is used to store user credentials and metadata.
+ */
 @Entity
 @Data
 @NoArgsConstructor
