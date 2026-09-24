@@ -41,6 +41,7 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_PATH_STYLE_ACCESS: "true"
       CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://frontend-test:3000
+      JWT_SECRET_KEY: Y2zDqV9zZWNyw6h0ZV9wb3VyX3Rva2VuX2p3dF9hcHBfb2NfcDJfMjAyNg==
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q 'UP'"]
       interval: 5s

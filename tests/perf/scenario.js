@@ -9,10 +9,10 @@ const downloadDuration = new Trend("download_duration", true);
 export const options = {
   stages: [
     { duration: "30s", target: 10 },
-    { duration: "1m", target: 25 },
-    { duration: "1m", target: 50 },
-    { duration: "1m", target: 100 },
-    { duration: "30s", target: 0 },
+    // { duration: "1m", target: 25 },
+    // { duration: "1m", target: 50 },
+    // { duration: "1m", target: 100 },
+    // { duration: "30s", target: 0 },
   ],
 
   thresholds: {

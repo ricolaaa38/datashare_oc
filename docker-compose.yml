@@ -45,6 +45,7 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_PATH_STYLE_ACCESS: "true"
       S3_BUCKET: datashare-files
+      JWT_SECRET_KEY: Y2zDqV9zZWNyw6h0ZV9wb3VyX3Rva2VuX2p3dF9hcHBfb2NfcDJfMjAyNg==
     ports:
       - "8080:8080"
     depends_on:
