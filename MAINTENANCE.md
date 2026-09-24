@@ -11,6 +11,54 @@ docker compose down
 
 Pour repartir d’un environnement local vierge, utiliser `docker compose down -v`. Cette commande supprime les données PostgreSQL et MinIO locales.
 
+## Documentation technique
+
+### Architecture
+
+DataShare est une application web composée des services suivants :
+
+| Composant | Technologie | Responsabilité |
+| --- | --- | --- |
+| `frontend` | Next.js 16, React 19, Tailwind CSS 4 | Interface web, session utilisateur et appels REST |
+| `backend` | Java 21, Spring Boot 4.0.8 | API REST, règles métier, authentification et orchestration du stockage |
+| `postgres` | PostgreSQL 16 | Utilisateurs, fichiers, jetons de téléchargement et tags |
+| `minio` | MinIO, compatible S3 | Contenu binaire des fichiers |
+
+Le frontend écoute sur le port `3000`, le backend sur `8080`, PostgreSQL sur `5432` et MinIO sur `9000` (API) / `9001` (console). Les services backend et frontend sont construits à partir de `backend/dockerfile` et `frontend/dockerfile`.
+
+### Flux principaux
+
+- **Téléversement** : le frontend envoie le fichier au backend ; le backend valide la taille et l’extension, enregistre les métadonnées dans PostgreSQL et le contenu dans le bucket S3/MinIO.
+- **Partage** : le backend génère un jeton aléatoire, ne conserve que son hash SHA-256, puis renvoie une URL publique avec expiration et mot de passe optionnel.
+- **Téléchargement** : le frontend appelle `/downloads/{token}` ; le backend vérifie le jeton, l’expiration et le mot de passe avant de streamer l’objet depuis S3/MinIO.
+- **Authentification** : les comptes utilisent un JWT. Les endpoints `/users`, `/auth/login`, `/downloads/**` et le téléversement anonyme sont publics ; les autres opérations nécessitent un bearer token.
+
+### Organisation du code
+
+- `backend/src/main/java` contient les contrôleurs, services, entités JPA, configuration, sécurité JWT et gestionnaire d’exceptions.
+- `backend/src/main/resources/static/openapi.yaml` est le contrat d’API. Les interfaces et modèles générés dans `backend/target/generated-sources/openapi` ne doivent pas être modifiés manuellement.
+- `frontend/app` contient les routes App Router : `/`, `/login`, `/register`, `/files` et `/download/[token]`.
+- `frontend/components` regroupe les composants d’interface et les composants métier ; `frontend/lib/api` contient les clients REST par tag OpenAPI.
+
+### Persistance et stockage
+
+Hibernate utilise `spring.jpa.hibernate.ddl-auto=update` pour créer ou mettre à jour le schéma PostgreSQL au démarrage. Il n’existe pas encore de migrations versionnées Flyway/Liquibase : sauvegarder la base avant toute évolution de modèle en environnement partagé.
+
+Les métadonnées et le contenu sont séparés : une suppression doit retirer l’enregistrement PostgreSQL et l’objet S3. Le bucket configuré par `S3_BUCKET` est créé automatiquement par le backend s’il n’existe pas.
+
+### Paramètres techniques importants
+
+| Paramètre | Usage | Valeur ou contrainte |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | URL de l’API injectée dans le bundle frontend | définie au build, pas à l’exécution |
+| `APP_PUBLIC_URL` | Base des liens de téléchargement générés | doit être accessible par les utilisateurs |
+| `CORS_ALLOWED_ORIGINS` | Origines autorisées par le backend | doit inclure l’URL frontend |
+| `UPLOAD_FORBIDDEN_EXTENSIONS` | Extensions refusées | contrôle complémentaire côté backend |
+| `spring.servlet.multipart.max-file-size` | Taille maximale d’un fichier | `1GB` par défaut |
+| `CLEANUP_CRON` / `CLEANUP_BATCH_SIZE` | Nettoyage des fichiers expirés | toutes les 15 minutes / 200 par défaut |
+
+Les paramètres complets sont définis dans `backend/src/main/resources/application.properties` et surchargés par les variables d’environnement dans Docker Compose.
+
 ## Cycle de validation
 
 Avant toute livraison :
